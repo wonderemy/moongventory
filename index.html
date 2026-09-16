@@ -799,6 +799,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       return `<div class="sform">${seg}
         <p class="reco ${r.cls}">${r.text}</p>
         <div class="shops">${shopCards(it)}</div>
+        ${(it.candidates || []).some(c => c.url) && typeof window.__fetchPrice === 'function' ? `<button class="btn outline" type="button" data-act="price-check" id="price-check">지금 가격 확인</button><p class="meta" id="price-msg" style="text-align:center;margin:-6px 0 0"></p>` : ''}
         <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">닫기</button></div>
       </div>`;
     }
@@ -1114,6 +1115,29 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       }
       if (act === 'buy'){ mode = 'buy'; buyTab = 'where'; render(); return; }
       if (act === 'buytab'){ buyTab = btn.dataset.val; render(); return; }
+      if (act === 'price-check'){
+        if (!it || btn.disabled) return;
+        const links = (it.candidates || []).filter(c => c.url && shopOf(c.url));
+        if (!links.length){ toast('상품 링크를 먼저 넣어 주세요'); return; }
+        btn.disabled = true; btn.textContent = '확인 중…'; const msg = $('#price-msg');
+        const doc = JSON.parse(JSON.stringify(prices[it.id] || {})); const results = [];
+        for (const c of links){
+          const shop = shopOf(c.url);
+          try {
+            const r = await window.__fetchPrice(c.url);
+            if (r && r.ok && r.price){
+              doc[shop] = doc[shop] || { options: [] }; doc[shop].options = doc[shop].options || [];
+              let o = doc[shop].options.find(x => x.url === c.url);
+              if (!o){ o = { label: (r.name || c.name || SHOP_NAME[shop]).slice(0, 40), count: 1, url: c.url }; doc[shop].options.push(o); }
+              o.price = r.price; o.at = r.at; results.push(`${SHOP_NAME[shop]} ${fmtWon(r.price)}`);
+            } else results.push(`${SHOP_NAME[shop]} 못 읽음`);
+          } catch (e) { console.error(e); results.push(`${SHOP_NAME[shop]} 못 읽음`); }
+        }
+        doc.at = new Date().toISOString().slice(0, 10);
+        try { if (typeof window.__savePrices === 'function') await window.__savePrices(it.id, doc); prices[it.id] = doc; } catch (e) { console.error(e); }
+        if (msg) msg.textContent = results.join(' · ');
+        toast(results.join(' · ')); render(); return;
+      }
       if (act === 'step'){
         const inp = $(btn.dataset.target); if (!inp) return;
         const stepv = Number(btn.dataset.delta); const min = Number(inp.min || 0);
@@ -1334,6 +1358,8 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const cfg = window.MOONG_CONFIG || {};
     if (!cfg.url || !cfg.key || !window.supabase){ $('#footnote').textContent = '이 기기에만 저장됩니다.'; return; }
     sb = window.supabase.createClient(cfg.url, cfg.key);
+    window.__fetchPrice = async (url) => { const { data, error } = await sb.functions.invoke('price', { body: { url } }); if (error) throw error; return data; };
+    window.__savePrices = async (id, doc) => { const { error } = await sb.from('prices').upsert({ id, data: doc, updated_at: new Date().toISOString() }); if (error) throw error; };
     async function start(){
       hideLogin();
       try { await loadAll(); } catch (e) { console.error(e); $('#footnote').textContent = '저장소에 연결하지 못했습니다.'; return; }
