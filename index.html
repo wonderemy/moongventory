@@ -304,6 +304,16 @@ header.top{display:flex;align-items:center;margin-bottom:-6px}
 .alert .chev.open{transform:rotate(180deg)}
 @media (prefers-reduced-motion: reduce){.alert .chev{transition:none}}
 </style>
+<style>
+/* ===== login ===== */
+.login{position:fixed;inset:0;z-index:20;background:hsl(var(--background));display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{width:100%;max-width:360px;background:hsl(var(--card));border-radius:20px;box-shadow:var(--shadow-sm);padding:24px 20px;display:flex;flex-direction:column;gap:12px}
+.login-title{font-family:"GriunMongtori",cursive;font-size:22px;text-align:center}
+.login-sub{margin:0;text-align:center;color:hsl(var(--muted-foreground));font-size:13px}
+.login-msg{margin:0;text-align:center;font-size:13px;color:hsl(var(--muted-foreground));min-height:1.2em}
+body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+.views{top:env(safe-area-inset-top)}
+</style>
 
 <div class="login" id="login" hidden>
   <div class="login-card">
