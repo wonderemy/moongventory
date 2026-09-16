@@ -351,10 +351,13 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .fbtn .btn{flex:1;height:48px;font-size:15px;font-weight:700}
 .fbtn.light .btn{height:42px;font-size:14px;font-weight:500}
 .sheet .form .field .input,.sheet .form .field select.input,.sheet .form .field input[type="date"].input{height:44px;min-height:44px;border-radius:12px;padding:0 12px;line-height:44px;-webkit-appearance:none;appearance:none;box-sizing:border-box}
-.sheet .form .field input[type="date"].input{width:auto;min-width:160px}
+.sheet .form .field .input{flex:1;width:auto;text-align:left}
+.sheet .form .field input[type="date"].input{min-width:0}
+.req{font-style:normal;color:hsl(var(--destructive));margin-left:3px;font-weight:700}
+.lbl-sub{font-style:normal;font-weight:400;color:hsl(var(--muted-foreground));font-size:12px}
 .sheet .form .field select.input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E837B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:16px;padding-right:36px}
-.sheet .form .field input.input.w{width:120px;text-align:right}
-#price-check{gap:8px}
+
+#price-check{gap:8px;margin-top:-4px}
 #price-check svg{display:block}
 #price-check.spin svg{animation:ptr-spin .9s linear infinite}
 .reco{margin:0;padding:10px 12px;border-radius:12px;background:hsl(var(--muted));font-size:14px;font-weight:600}
@@ -808,14 +811,14 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     }
     return `<div class="sform">${seg}
       <div class="form">
-        <div class="field"><label class="label" for="b-shop">어디서</label><select class="input" id="b-shop">
+        <div class="field"><label class="label" for="b-shop">어디서<i class="req">*</i></label><select class="input" id="b-shop">
           ${SHOP_KEYS.map(sh => `<option value="${sh}" ${sh === defShop ? 'selected' : ''}>${SHOP_NAME[sh]}</option>`).join('')}
           <option value="other">기타</option>
         </select></div>
-        ${it.owner === 'mung' ? `<div class="field" style="align-items:flex-start"><span class="label" style="padding-top:8px">누가</span><div class="faces small" id="b-by">${['mom','dad'].map(k => `<button class="face-pick ${(buyBy || '') === k ? 'on' : ''}" type="button" data-act="pickby" data-val="${k}" aria-pressed="${(buyBy || '') === k}"><img src="${(document.querySelector('.tab.icon[data-owner=' + k + '] img') || {}).src || ''}" alt="${OWNER[k]}"><span>${OWNER[k]}</span></button>`).join('')}</div></div>` : ''}
-        <div class="field"><label class="label" for="b-date">언제</label><input class="input" type="date" id="b-date" value="${todayISO()}" max="${todayISO()}" style="width:auto"></div>
-        <div class="field"><label class="label" for="b-qty">몇 ${unit}</label><input class="input w" type="number" inputmode="numeric" id="b-qty" value="${def.count || ''}" min="1" step="1" placeholder="0"><span class="hint">${unit}</span></div>
-        <div class="field"><label class="label" for="b-price">얼마에</label><input class="input w" type="number" inputmode="numeric" id="b-price" value="${def.price || ''}" min="0" step="10" placeholder="0"><span class="hint">원 · 몰라도 돼요</span></div>
+        ${it.owner === 'mung' ? `<div class="field" style="align-items:flex-start"><span class="label" style="padding-top:8px">누가<i class="req">*</i></span><div class="faces small" id="b-by">${['mom','dad'].map(k => `<button class="face-pick ${(buyBy || '') === k ? 'on' : ''}" type="button" data-act="pickby" data-val="${k}" aria-pressed="${(buyBy || '') === k}"><img src="${(document.querySelector('.tab.icon[data-owner=' + k + '] img') || {}).src || ''}" alt="${OWNER[k]}"><span>${OWNER[k]}</span></button>`).join('')}</div></div>` : ''}
+        <div class="field"><label class="label" for="b-date">언제<i class="req">*</i></label><input class="input" type="date" id="b-date" value="${todayISO()}" max="${todayISO()}"></div>
+        <div class="field"><label class="label" for="b-qty">몇 ${unit}<i class="req">*</i></label><input class="input" type="number" inputmode="numeric" id="b-qty" value="${def.count || ''}" min="1" step="1" placeholder="0"></div>
+        <div class="field"><label class="label" for="b-price">얼마에 <em class="lbl-sub">원</em></label><input class="input" type="number" inputmode="numeric" id="b-price" value="${def.price || ''}" min="0" step="10" placeholder="0"></div>
       </div>
       <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">취소</button><button class="btn primary" type="button" data-act="buy-save">기록</button></div>
     </div>`;
