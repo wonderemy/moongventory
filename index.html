@@ -355,6 +355,13 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .qs{font-size:13px;color:hsl(var(--muted-foreground));margin:0 0 14px}
 /* B: 편집 페이지 */
 .editpage{display:flex;flex-direction:column;gap:12px}
+.settingswrap{display:flex;flex-direction:column;gap:12px}
+.mecard{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mecard .me-t{display:flex;flex-direction:column;gap:2px}
+.mecard .me-t b{font-size:14px;font-weight:600}
+.mecard .faces.small{gap:10px}
+.mecard .faces.small .face-pick img{width:40px;height:40px;padding:5px}
+.mecard .face-pick span{display:none}
 .links{display:flex;flex-direction:column;gap:8px}
 .linkrow{display:flex;gap:8px;align-items:center}
 .linkrow .input.fi{flex:1;width:auto;font-size:14px}
@@ -919,7 +926,8 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   function renderSettings(now){
     const it = mode === 'edit' || mode === 'field' ? items.find(x => x.id === openId) : null;
     if (it){ if (!editDraft) editDraft = clean(it); settingsEl.className = 'editpage'; settingsEl.innerHTML = renderEditPage({id: it.id, ...editDraft}); return; }
-    settingsEl.className = 'card';
+    settingsEl.className = 'settingswrap';
+    const meCard = `<div class="card mecard"><div class="me-t"><b>이 폰은 누구 거예요?</b><span class="meta">뭉이 것을 살 때 자동으로 골라져요</span></div><div class="faces small">${['mom','dad'].map(k => `<button class="face-pick ${(buyBy || '') === k ? 'on' : ''}" type="button" data-act="pickby" data-val="${k}" aria-pressed="${(buyBy || '') === k}"><img src="${(document.querySelector('.tab.icon[data-owner=' + k + '] img') || {}).src || ''}" alt="${OWNER[k]}"><span>${OWNER[k]}</span></button>`).join('')}</div></div>`;
     let html = '';
     const visible = items.filter(it => owner === 'all' || (it.owner || 'me') === owner);
     for (const it of visible.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''))){
@@ -934,7 +942,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       </div>`;
     }
     if (!html) html = `<div class="empty">표시할 품목이 없습니다.</div>`;
-    settingsEl.innerHTML = html;
+    settingsEl.innerHTML = meCard + `<div class="card">${html}</div>`;
   }
   function renderEditPage(it){
     const u = esc(it.unit || '개');
