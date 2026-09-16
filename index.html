@@ -331,7 +331,8 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .big-in{height:56px;border-radius:14px;border:2px solid hsl(var(--primary));font-size:20px;font-weight:600}
 .stepper2{display:flex;align-items:center;gap:8px}
 .stepper2 .input.fi{flex:1;width:auto}
-.stp{width:44px;height:44px;flex:0 0 auto;border-radius:9999px;border:1px solid hsl(var(--border));background:hsl(var(--card));color:hsl(var(--foreground));font:inherit;font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.stp{width:44px;height:44px;flex:0 0 auto;border-radius:9999px;border:1px solid hsl(var(--border));background:hsl(var(--card));color:hsl(var(--foreground));font:inherit;font-size:20px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.stp svg{display:block}
 .seg{display:flex;background:hsl(var(--muted));border-radius:12px;padding:4px;gap:4px}
 .segb{flex:1;font:inherit;font-size:14px;font-weight:600;color:hsl(var(--muted-foreground));background:none;border:0;border-radius:9px;padding:9px 0;cursor:pointer}
 .segb.on{background:hsl(var(--card));color:hsl(var(--foreground));box-shadow:var(--shadow-sm)}
@@ -349,6 +350,10 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .fbtn{display:flex;gap:8px;margin-top:4px}
 .fbtn .btn{flex:1;height:48px;font-size:15px;font-weight:700}
 .fbtn.light .btn{height:42px;font-size:14px;font-weight:500}
+.sheet .form .field .input,.sheet .form .field select.input,.sheet .form .field input[type="date"].input{height:44px;min-height:44px;border-radius:12px;padding:0 12px;line-height:44px;-webkit-appearance:none;appearance:none;box-sizing:border-box}
+.sheet .form .field input[type="date"].input{width:auto;min-width:160px}
+.sheet .form .field select.input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E837B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:16px;padding-right:36px}
+.sheet .form .field input.input.w{width:120px;text-align:right}
 .reco{margin:0;padding:10px 12px;border-radius:12px;background:hsl(var(--muted));font-size:14px;font-weight:600}
 .reco.good{background:hsl(var(--mint));color:hsl(150 40% 22%)}
 .dots{display:flex;gap:6px;justify-content:center;margin:2px 0 14px}
@@ -401,7 +406,8 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 
 /* ===== pull to refresh ===== */
 .ptr{position:fixed;top:0;left:50%;z-index:1;width:38px;height:38px;border-radius:9999px;background:hsl(var(--card));box-shadow:var(--shadow-sm);color:hsl(var(--primary));display:flex;align-items:center;justify-content:center;transform:translate(-50%,-44px);opacity:0;pointer-events:none}
-.container{position:relative;z-index:2}
+html,body{overscroll-behavior-y:contain}
+.container{position:relative;z-index:2;will-change:transform}
 @keyframes slide-l{from{transform:translateX(28px);opacity:.4}to{transform:none;opacity:1}}
 @keyframes slide-r{from{transform:translateX(-28px);opacity:.4}to{transform:none;opacity:1}}
 .container.slide-l{animation:slide-l .22s ease-out}
@@ -508,6 +514,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     <div id="sheet-body"></div>
   </div>
 </div>
+<div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4.5h-4.5"/></svg></div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -740,7 +747,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const unit = esc(it.unit || '개');
     return `<div class="sform">
       <div class="fg"><span class="fl">현재 수량 <em>${e ? '추정 ' + fmtQty(e.est) + unit : '아직 없음'}</em></span>
-        <div class="stepper2"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="-1" aria-label="하나 빼기">−</button><input class="input fi" type="number" inputmode="numeric" id="cnt-${it.id}" value="${guess}" min="0" step="1"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="1" aria-label="하나 더하기">+</button></div>
+        <div class="stepper2"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="-1" aria-label="하나 빼기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button><input class="input fi" type="number" inputmode="numeric" id="cnt-${it.id}" value="${guess}" min="0" step="1"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="1" aria-label="하나 더하기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6c.15 4 .15 8 0 12"/><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button></div>
       </div>
       <div class="fbtn light"><button class="btn outline" type="button" data-act="buy">구매</button><button class="btn outline" type="button" data-act="count-save">수량 수정</button></div>
     </div>`;
@@ -792,13 +799,13 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       return `<div class="sform">${seg}
         <p class="reco ${r.cls}">${r.text}</p>
         <div class="shops">${shopCards(it)}</div>
-        <div class="fbtn light"><button class="btn outline" type="button" data-act="cancel">닫기</button><button class="btn primary" type="button" data-act="buytab" data-val="done">사고 나서 기록하기</button></div>
+        <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">닫기</button></div>
       </div>`;
     }
     return `<div class="sform">${seg}
       <div class="form">
         <div class="field"><label class="label" for="b-shop">어디서</label><select class="input" id="b-shop">
-          ${shops.map(sh => `<option value="${sh}" ${sh === defShop ? 'selected' : ''}>${SHOP_NAME[sh]}</option>`).join('')}
+          ${SHOP_KEYS.map(sh => `<option value="${sh}" ${sh === defShop ? 'selected' : ''}>${SHOP_NAME[sh]}</option>`).join('')}
           <option value="other">기타</option>
         </select></div>
         ${it.owner === 'mung' ? `<div class="field" style="align-items:flex-start"><span class="label" style="padding-top:8px">누가</span><div class="faces small" id="b-by">${['mom','dad'].map(k => `<button class="face-pick ${(buyBy || '') === k ? 'on' : ''}" type="button" data-act="pickby" data-val="${k}" aria-pressed="${(buyBy || '') === k}"><img src="${(document.querySelector('.tab.icon[data-owner=' + k + '] img') || {}).src || ''}" alt="${OWNER[k]}"><span>${OWNER[k]}</span></button>`).join('')}</div></div>` : ''}
@@ -971,7 +978,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   const faceBtn = (k, on) => `<button class="face-pick ${on ? 'on' : ''}" type="button" data-act="pick" data-key="owner" data-val="${k}" aria-pressed="${on}"><img src="${(document.querySelector('.tab.icon[data-owner=' + k + '] img') || {}).src || ''}" alt="${OWNER[k]}"><span>${OWNER[k]}</span></button>`;
   const shopChip = (k, on) => `<button class="chip2 ${on ? 'on' : ''}" type="button" data-act="pickshop" data-val="${k}" aria-pressed="${on}">${SHOP_NAME[k]}</button>`;
   const segBtn = (key, val, label, on) => `<button class="segb ${on ? 'on' : ''}" type="button" data-act="pick" data-key="${key}" data-val="${val}" aria-pressed="${on}">${label}</button>`;
-  const stepper = (id, val, step, min, suffix) => `<div class="stepper2"><button class="stp" type="button" data-act="step" data-target="#${id}" data-delta="${-step}">−</button><input class="input fi" type="number" inputmode="decimal" id="${id}" value="${val}" min="${min}" step="${step}"><button class="stp" type="button" data-act="step" data-target="#${id}" data-delta="${step}">+</button>${suffix ? `<span class="fl" style="margin:0 0 0 4px">${suffix}</span>` : ''}</div>`;
+  const stepper = (id, val, step, min, suffix) => `<div class="stepper2"><button class="stp" type="button" data-act="step" data-target="#${id}" data-delta="${-step}" aria-label="줄이기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button><input class="input fi" type="number" inputmode="decimal" id="${id}" value="${val}" min="${min}" step="${step}"><button class="stp" type="button" data-act="step" data-target="#${id}" data-delta="${step}" aria-label="늘리기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6c.15 4 .15 8 0 12"/><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button>${suffix ? `<span class="fl" style="margin:0 0 0 4px">${suffix}</span>` : ''}</div>`;
 
   // 필드 편집 시트(B의 한 줄)
   const unitChips = (cur) => `<div class="chips">${['개','팩','봉','병','캔','통'].map(x => `<button class="chip2 ${cur === x ? 'on' : ''}" type="button" data-act="unitpick" data-val="${x}">${x}</button>`).join('')}</div>`;
@@ -1236,6 +1243,37 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     });
   }
 
+  // ---------- pull to reload: 화면이 따라 내려오고, 놓으면 페이지를 다시 불러옴 ----------
+  (function(){
+    const ptr = $('#ptr'); const page = document.querySelector('.container'); if (!ptr || !page) return;
+    const MAX = 110, ARM = 70; let startY = null, pulling = false, dy = 0, busy = false;
+    function place(d, animate){
+      page.style.transition = animate ? 'transform .25s ease-out' : 'none';
+      ptr.style.transition = animate ? 'transform .25s ease-out, opacity .2s' : 'none';
+      page.style.transform = d ? `translateY(${d}px)` : '';
+      ptr.style.transform = `translate(-50%, ${d - 44}px) rotate(${d * 3}deg)`;
+      ptr.style.opacity = String(Math.min(1, d / 28));
+    }
+    document.addEventListener('touchstart', ev => {
+      if (busy || !$('#sheet').hidden) { startY = null; return; }
+      startY = window.scrollY <= 0 ? ev.touches[0].clientY : null; pulling = false; dy = 0;
+    }, {passive: true});
+    document.addEventListener('touchmove', ev => {
+      if (startY == null || busy) return;
+      const d = ev.touches[0].clientY - startY;
+      if (d > 6 && window.scrollY <= 0){ pulling = true; dy = Math.min(MAX, d * 0.55); place(dy, false); if (ev.cancelable) ev.preventDefault(); }
+      else if (pulling && d <= 0){ pulling = false; dy = 0; place(0, false); }
+    }, {passive: false});
+    document.addEventListener('touchend', () => {
+      if (startY == null) return;
+      const armed = pulling && dy >= ARM * 0.55;
+      startY = null; pulling = false;
+      if (armed){ busy = true; ptr.classList.add('spin'); place(56, true); ptr.style.transform = 'translate(-50%, 12px)'; setTimeout(() => location.reload(), 350); }
+      else place(0, true);
+      dy = 0;
+    }, {passive: true});
+  })();
+
   // ---------- swipe: 재고 ↔ 통계 ↔ 설정 ----------
   (function(){
     const ORDER = ['stock', 'stats', 'settings'];
@@ -1298,7 +1336,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     sb = window.supabase.createClient(cfg.url, cfg.key);
     async function start(){
       hideLogin();
-      try { await loadAll(); toast('불러왔어요'); } catch (e) { console.error(e); $('#footnote').textContent = '저장소에 연결하지 못했습니다.'; return; }
+      try { await loadAll(); } catch (e) { console.error(e); $('#footnote').textContent = '저장소에 연결하지 못했습니다.'; return; }
       sb.channel('moong').on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => loadAll().catch(console.error))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'prices' }, () => loadAll().catch(console.error)).subscribe();
       document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAll().catch(console.error); });
