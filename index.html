@@ -397,9 +397,13 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .chart svg{max-width:100%}
 
 /* ===== pull to refresh ===== */
-html,body{overscroll-behavior-y:contain}
 .ptr{position:fixed;top:0;left:50%;z-index:1;width:38px;height:38px;border-radius:9999px;background:hsl(var(--card));box-shadow:var(--shadow-sm);color:hsl(var(--primary));display:flex;align-items:center;justify-content:center;transform:translate(-50%,-44px);opacity:0;pointer-events:none}
-.container{position:relative;z-index:2;will-change:transform}
+.container{position:relative;z-index:2}
+@keyframes slide-l{from{transform:translateX(28px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes slide-r{from{transform:translateX(-28px);opacity:.4}to{transform:none;opacity:1}}
+.container.slide-l{animation:slide-l .22s ease-out}
+.container.slide-r{animation:slide-r .22s ease-out}
+@media (prefers-reduced-motion: reduce){.container.slide-l,.container.slide-r{animation:none}}
 .ptr.spin svg{animation:ptr-spin .8s linear infinite}
 @keyframes ptr-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){.ptr.spin svg{animation-duration:1.6s}}
@@ -501,7 +505,6 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     <div id="sheet-body"></div>
   </div>
 </div>
-<div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4.5h-4.5"/></svg></div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -1221,38 +1224,30 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     });
   }
 
-  // ---------- pull to refresh (touch): 화면이 따라 내려오고 위 빈자리에 스피너 ----------
+  // ---------- swipe: 재고 ↔ 통계 ↔ 설정 ----------
   (function(){
-    const ptr = $('#ptr'); const page = document.querySelector('.container'); if (!ptr || !page) return;
-    const MAX = 96, ARM = 60, HOLD = 56; let startY = null, pulling = false, dy = 0, busy = false;
-    function place(d, animate){
-      page.style.transition = animate ? 'transform .25s ease-out' : 'none';
-      ptr.style.transition = animate ? 'transform .25s ease-out, opacity .2s' : 'none';
-      page.style.transform = d ? `translateY(${d}px)` : '';
-      ptr.style.transform = `translate(-50%, ${d - 44}px) rotate(${d * 3}deg)`;
-      ptr.style.opacity = String(Math.min(1, d / 28));
-    }
+    const ORDER = ['stock', 'stats', 'settings'];
+    let sx = null, sy = null, tracking = false;
     document.addEventListener('touchstart', ev => {
-      if (busy || !$('#sheet').hidden) return;
-      if (window.scrollY <= 0){ startY = ev.touches[0].clientY; pulling = false; } else startY = null;
+      if (!$('#sheet').hidden || (mode === 'edit' || mode === 'field')) { sx = null; return; }
+      const t = ev.touches[0]; sx = t.clientX; sy = t.clientY; tracking = true;
     }, {passive: true});
     document.addEventListener('touchmove', ev => {
-      if (startY == null || busy) return;
-      const d = ev.touches[0].clientY - startY;
-      if (d > 6 && window.scrollY <= 0){ pulling = true; dy = Math.min(MAX, d * 0.55); place(dy, false); if (ev.cancelable) ev.preventDefault(); }
-    }, {passive: false});
-    async function done(){
-      busy = true; ptr.classList.add('spin'); place(HOLD, true); ptr.style.transform = `translate(-50%, ${HOLD - 44}px)`;
-      const t0 = Date.now();
-      try { if (typeof window.__refresh === 'function') await window.__refresh(); else render(); } catch (e) { console.error(e); }
-      setTimeout(() => { ptr.classList.remove('spin'); place(0, true); busy = false; }, Math.max(0, 500 - (Date.now() - t0)));
-    }
-    document.addEventListener('touchend', () => {
-      if (startY == null) return;
-      const armed = pulling && dy >= ARM * 0.55;
-      startY = null; pulling = false;
-      if (armed) done(); else place(0, true);
-      dy = 0;
+      if (sx == null || !tracking) return;
+      const t = ev.touches[0]; const dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) tracking = false;   // 세로 스크롤이면 포기
+    }, {passive: true});
+    document.addEventListener('touchend', ev => {
+      if (sx == null || !tracking) { sx = null; return; }
+      const t = ev.changedTouches[0]; const dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
+      if (Math.abs(dx) < 60 || Math.abs(dy) > 50) return;
+      const i = ORDER.indexOf(view); const next = ORDER[i + (dx < 0 ? 1 : -1)]; if (!next) return;
+      const page = document.querySelector('.container');
+      page.classList.remove('slide-l', 'slide-r'); void page.offsetWidth;
+      page.classList.add(dx < 0 ? 'slide-l' : 'slide-r');
+      const cur = items.find(x => x.id === openId);
+      if (cur && editDraft && JSON.stringify(editDraft) !== JSON.stringify(clean(cur))){ save(cur.id, editDraft).then(() => toast('저장했습니다')).catch(console.error); }
+      editDraft = null; view = next; openId = null; mode = null; confirmDelete = false; render(); window.scrollTo({top: 0});
     }, {passive: true});
   })();
 
@@ -1289,7 +1284,6 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const cfg = window.MOONG_CONFIG || {};
     if (!cfg.url || !cfg.key || !window.supabase){ $('#footnote').textContent = '이 기기에만 저장됩니다.'; return; }
     sb = window.supabase.createClient(cfg.url, cfg.key);
-    window.__refresh = () => loadAll();
     async function start(){
       hideLogin();
       try { await loadAll(); } catch (e) { console.error(e); $('#footnote').textContent = '저장소에 연결하지 못했습니다.'; return; }
