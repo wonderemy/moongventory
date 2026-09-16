@@ -413,6 +413,21 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 #stats > .card{width:100%}
 .chart svg{max-width:100%}
 
+/* ===== v30: 카드 탭 = 구매, 숫자 탭 = 수량 고치기 / 추가 5단계 ===== */
+.tile{position:relative}
+.tile-main{position:absolute;inset:0;width:100%;height:100%;background:none;border:0;padding:0;margin:0;cursor:pointer;border-radius:inherit;-webkit-tap-highlight-color:transparent}
+.tile-main:focus{outline:none}
+.tile-main:focus-visible{outline:none;box-shadow:inset 0 0 0 2px hsl(var(--ring))}
+@media (hover:hover){.tile-main:hover{background:hsl(var(--muted) / .45)}}
+.tile-head{position:relative;pointer-events:none;cursor:default}
+.qbtn{pointer-events:auto;display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:4px 8px;margin:-4px -8px;border-radius:10px;font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color .15s}
+.qbtn svg{display:block;color:hsl(var(--muted-foreground));opacity:.75;flex:0 0 auto;margin-left:1px}
+.qbtn:active{background:hsl(var(--muted))}
+.qbtn:focus{outline:none}
+.qbtn:focus-visible{outline:none;box-shadow:0 0 0 2px hsl(var(--ring))}
+.skipbtn{width:100%;height:42px;margin-top:8px;font-weight:500;color:hsl(var(--muted-foreground))}
+@media (prefers-reduced-motion: reduce){.qbtn{transition:none}}
+
 /* ===== pull to refresh ===== */
 .ptr{position:fixed;top:0;left:50%;z-index:1;width:38px;height:38px;border-radius:9999px;background:hsl(var(--card));box-shadow:var(--shadow-sm);color:hsl(var(--primary));display:flex;align-items:center;justify-content:center;transform:translate(-50%,-44px);opacity:0;pointer-events:none}
 html,body{overscroll-behavior-y:contain}
@@ -708,7 +723,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       }
     } else if (mode === 'new'){
       $('#sheet-title').textContent = '품목 추가';
-      $('#sheet-aside').innerHTML = `<div class="dots">${[1,2,3,4].map(i => `<i class="${i === newStep ? 'on' : ''}"></i>`).join('')}</div>`;
+      $('#sheet-aside').innerHTML = `<div class="dots">${[1,2,3,4,5].map(i => `<i class="${i === newStep ? 'on' : ''}"></i>`).join('')}</div>`;
       $('#sheet-body').innerHTML = renderNewStep();
       sheet.hidden = false; document.body.style.overflow = 'hidden';
     } else if (mode === 'field' && cur){
@@ -727,6 +742,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       .sort((a, b) => (RANK[a.st] - RANK[b.st]) || ((a.e ? a.e.daysLeft : 0) - (b.e ? b.e.daysLeft : 0)) || (a.it.name || '').localeCompare(b.it.name || ''));
   }
 
+  const PEN = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.2 19.8c.3-1.5.6-3 1.1-4.4L15.9 4.8c1-.9 2.4-.8 3.3.1.9.9 1 2.3.1 3.3L8.7 18.7c-1.5.4-3 .8-4.5 1.1z"/><path d="M14.3 6.5c1.1.9 2.1 1.9 3.1 3"/></svg>`;
   function renderStock(now){
     renderRound(now);
     listEl.className = 'tiles';
@@ -740,13 +756,15 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       // 막대 = 남은 양 / 기준량(최근 구매 수량 또는 기준 수량)
       let pct = 0;
       if (e){ const ref = Math.max(e.est, (s.last && s.last.qty) || it.baseQty || 1); pct = Math.max(0, Math.min(100, Math.round(e.est / ref * 100))); }
+      // 카드 전체 = 구매 시트, 숫자 = 수량 고치기 시트
       html += `<div class="tile" data-id="${it.id}">
-        <button class="tile-head" type="button" data-act="toggle">
+        <button class="tile-main" type="button" data-act="toggle" aria-label="${esc(it.name)} 구매"></button>
+        <div class="tile-head">
           <div class="t"><span class="name">${esc(it.name)}</span>${faceImg(it.owner)}</div>
-          <div class="big-row"><div class="big">${e ? fmtQty(e.est) : '—'}<small>${e ? unit : ''}</small></div>${(st === 'order' || st === 'soon') ? `<span class="badge ${BADGE[st]}">${LABEL[st]}</span>` : ''}</div>
+          <div class="big-row"><button class="qbtn" type="button" data-act="count" aria-label="${esc(it.name)} 수량 고치기" title="수량 고치기"><span class="big">${e ? fmtQty(e.est) : '—'}<small>${e ? unit : ''}</small></span>${PEN}</button>${(st === 'order' || st === 'soon') ? `<span class="badge ${BADGE[st]}">${LABEL[st]}</span>` : ''}</div>
           <div class="bar"><i class="f-${st}" style="width:${pct}%"></i></div>
           <div class="meta">${metaBits.join(' · ')}</div>
-        </button>
+        </div>
       </div>`;
     }
     if (!html) html = `<div class="empty" style="grid-column:1/-1">표시할 품목이 없습니다.</div>`;
@@ -760,7 +778,8 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       <div class="fg"><span class="fl">현재 수량 <em>${e ? '추정 ' + fmtQty(e.est) + unit : '아직 없음'}</em></span>
         <div class="stepper2"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="-1" aria-label="하나 빼기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button><input class="input fi" type="number" inputmode="numeric" id="cnt-${it.id}" value="${guess}" min="0" step="1"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="1" aria-label="하나 더하기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6c.15 4 .15 8 0 12"/><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button></div>
       </div>
-      <div class="fbtn light"><button class="btn outline" type="button" data-act="buy">구매</button><button class="btn outline" type="button" data-act="count-save">수량 수정</button></div>
+      <p class="qs" style="margin:0">산 게 아니라 실제 개수를 맞추는 거예요. 새로 샀다면 카드를 눌러 ‘샀어요’에 적어 주세요.</p>
+      <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">취소</button><button class="btn primary" type="button" data-act="count-save">저장</button></div>
     </div>`;
   }
 
@@ -815,7 +834,14 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       </div>`;
     }
     return `<div class="sform">${seg}
-      <div class="form">
+      ${buyForm(it, defShop, def)}
+      <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">취소</button><button class="btn primary" type="button" data-act="buy-save">기록</button></div>
+    </div>`;
+  }
+  // 샀어요 폼(구매 시트 · 품목 추가 5단계 공용). it은 저장된 품목이거나 추가 초안(owner·shops·unit만 있으면 됨)
+  function buyForm(it, defShop, def){
+    def = def || {};
+    return `<div class="form">
         <div class="field"><label class="label" for="b-shop">어디서<i class="req">*</i></label><select class="input" id="b-shop">
           ${SHOP_KEYS.map(sh => `<option value="${sh}" ${sh === defShop ? 'selected' : ''}>${SHOP_NAME[sh]}</option>`).join('')}
           <option value="other">기타</option>
@@ -824,9 +850,16 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         <div class="field"><label class="label" for="b-date">언제<i class="req">*</i></label><input class="input" type="date" id="b-date" value="${todayISO()}" max="${todayISO()}"></div>
         <div class="field"><label class="label" for="b-qty">몇 개<i class="req">*</i></label><input class="input" type="number" inputmode="numeric" id="b-qty" value="${def.count || ''}" min="1" step="1" placeholder="0"></div>
         <div class="field"><label class="label" for="b-price">얼마</label><input class="input" type="number" inputmode="numeric" id="b-price" value="${def.price || ''}" min="0" step="10" placeholder="0"></div>
-      </div>
-      <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">취소</button><button class="btn primary" type="button" data-act="buy-save">기록</button></div>
-    </div>`;
+      </div>`;
+  }
+  // 샀어요 폼 읽기. 문제가 있으면 안내하고 null
+  function readBuyForm(ownerKey, now){
+    const qty = Number($('#b-qty').value); if (!(qty > 0)){ $('#b-qty').focus(); return null; }
+    const by = ownerKey === 'mung' ? buyBy : null;
+    if (ownerKey === 'mung' && !by){ toast('누가 샀는지 골라 주세요'); return null; }
+    const price = Number($('#b-price').value) || 0; const shop = $('#b-shop').value;
+    const dv = $('#b-date').value; const boughtAt = dv ? dateAtNoon(dv) : now;
+    return { qty, price, shop, boughtAt, by };
   }
 
   function renderRound(now){
@@ -1016,18 +1049,28 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     return '';
   }
 
-  // 품목 추가(C 단계형)
+  // 품목 추가(C 단계형) — 1~4 품목 정보, 5 구매 정보(건너뛸 수 있음)
   function renderNewStep(){
     const d = draft; const u = esc(d.unit || '개');
-    const dots = `<div class="dots">${[1,2,3,4].map(i => `<i class="${i === newStep ? 'on' : ''}"></i>`).join('')}</div>`;
     const nav = (last) => `<div class="fbtn">${newStep > 1 ? `<button class="btn outline" type="button" data-act="new-prev">이전</button>` : `<button class="btn outline" type="button" data-act="cancel">취소</button>`}<button class="btn primary" type="button" data-act="${last ? 'new-save' : 'new-next'}">${last ? '저장' : '다음'}</button></div>`;
-    const wrap = (body, last) => `<div class="sform steps"><div class="stepbody">${body}</div>${nav(last)}</div>`;
-    if (newStep === 1) return wrap(`<p class="q">무엇을 채우나요?</p><p class="qs">1/4 · 이름과 세는 단위</p><input class="input fi big-in" type="text" id="n-name" value="${esc(d.name)}" placeholder="예: 두유" data-autofocus><div class="fg" style="margin-top:6px"><span class="fl">세는 단위</span>${unitChips(d.unit)}<input class="input fi" type="text" id="n-unit" value="${esc(d.unit)}" placeholder="직접 입력"></div>`, false);
-    if (newStep === 2) return wrap(`<p class="q">누가 먹나요?</p><p class="qs">2/4</p><div class="faces">${['mom','dad','mung'].map(k => faceBtn(k, d.owner === k)).join('')}</div>`, false);
-    if (newStep === 3) return wrap(`<p class="q">어디서 사나요?</p><p class="qs">3/4 · 여러 곳이면 여러 개</p><div class="chips" id="fv-shops">${SHOP_KEYS.map(k => shopChip(k, d.shops.includes(k))).join('')}</div>`, false);
-    return wrap(`<p class="q">얼마나 먹나요?</p><p class="qs">4/4 · 대략이면 됩니다. 나중에 스스로 맞춰집니다</p>
+    const wrap = (body, last, extra) => `<div class="sform steps"><div class="stepbody">${body}</div>${nav(last)}${extra || ''}</div>`;
+    if (newStep === 1) return wrap(`<p class="q">무엇을 채우나요?</p><p class="qs">1/5 · 이름과 세는 단위</p><input class="input fi big-in" type="text" id="n-name" value="${esc(d.name)}" placeholder="예: 두유" data-autofocus><div class="fg" style="margin-top:6px"><span class="fl">세는 단위</span>${unitChips(d.unit)}<input class="input fi" type="text" id="n-unit" value="${esc(d.unit)}" placeholder="직접 입력"></div>`, false);
+    if (newStep === 2) return wrap(`<p class="q">누가 먹나요?</p><p class="qs">2/5</p><div class="faces">${['mom','dad','mung'].map(k => faceBtn(k, d.owner === k)).join('')}</div>`, false);
+    if (newStep === 3) return wrap(`<p class="q">어디서 사나요?</p><p class="qs">3/5 · 여러 곳이면 여러 개</p><div class="chips" id="fv-shops">${SHOP_KEYS.map(k => shopChip(k, d.shops.includes(k))).join('')}</div>`, false);
+    if (newStep === 4) return wrap(`<p class="q">얼마나 먹나요?</p><p class="qs">4/5 · 대략이면 됩니다. 나중에 스스로 맞춰집니다</p>
       <div class="seg" style="margin-bottom:12px">${segBtn('rateMode','perDay','하루에 몇 ' + u, d.rateMode !== 'daysPer')}${segBtn('rateMode','daysPer', esc(josa('한 ' + (d.unit || '개'), '이', '가')) + ' 며칠', d.rateMode === 'daysPer')}</div>
-      ${d.rateMode === 'daysPer' ? stepper('n-rate', fmtRate(d.daysPer), 0.5, 0.5, '') : stepper('n-rate', fmtRate(d.dailyRate), 0.1, 0, '')}`, true);
+      ${d.rateMode === 'daysPer' ? stepper('n-rate', fmtRate(d.daysPer), 0.5, 0.5, '') : stepper('n-rate', fmtRate(d.dailyRate), 0.1, 0, '')}`, false);
+    const shops = shopsFor(d).map(s => s.shop);
+    return wrap(`<p class="q">이미 사 둔 게 있나요?</p><p class="qs">5/5 · 있으면 구매 정보를 적어요. 건너뛰고 나중에 카드에서 넣어도 돼요</p>
+      ${buyForm(d, shops[0] || 'kurly', {})}`, true,
+      `<button class="btn ghost skipbtn" type="button" data-act="new-skip">건너뛰기 · 품목만 저장</button>`);
+  }
+  // 추가 초안 → 저장할 문서
+  function newDoc(){
+    const doc = { name: draft.name, owner: draft.owner, shops: draft.shops.slice(), unit: draft.unit, rateMode: draft.rateMode, leadDays: draft.leadDays, candidates: [], baseQty: null, baseAt: null, history: [] };
+    doc.shop = doc.shops.length === 1 && doc.shops[0] === 'kurly' ? 'kurly' : doc.shops.length === 1 && doc.shops[0] === 'naver' ? 'smartstore' : 'both';
+    if (draft.rateMode === 'daysPer'){ doc.daysPer = draft.daysPer; doc.dailyRate = Math.round((1 / draft.daysPer) * 1000) / 1000; } else { doc.dailyRate = draft.dailyRate; }
+    return doc;
   }
 
   // ---------- actions ----------
@@ -1056,8 +1099,8 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const u = it.unit || '개';
     toast(learned != null ? `${it.name} ${fmtQty(n)}${u}. 소비량을 다시 잡았습니다` : `${it.name} ${fmtQty(n)}${u}로 고쳤습니다`);
   }
-  // 구매 = 채움. 수량을 더하고 가격·판매처를 기록.
-  async function doBuy(it, qty, price, shop, now, boughtAt, by){
+  // 구매 = 채움. 수량을 더하고 가격·판매처를 기록. it은 저장된 품목이거나 새로 만들 문서
+  function buyDoc(it, qty, price, shop, now, boughtAt, by){
     const e = estimate(it, now);
     const doc = clean(it);
     const nowIso = new Date(now).toISOString();
@@ -1070,7 +1113,10 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const h = (it.history || []).slice(-59); const ev = {at, type: 'buy', qty, price: price || null, shop}; if (by) ev.by = by; h.push(ev);
     h.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     doc.history = h;
-    await save(it.id, doc);
+    return doc;
+  }
+  async function doBuy(it, qty, price, shop, now, boughtAt, by){
+    await save(it.id, buyDoc(it, qty, price, shop, now, boughtAt, by));
     toast(`${it.name} +${fmtQty(qty)}${it.unit || '개'} 구매 기록했습니다`);
   }
   document.addEventListener('click', async (ev) => {
@@ -1112,19 +1158,20 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const act = btn.dataset.act;
     try {
       if (act === 'toggle'){
-        openId = id; mode = view === 'settings' ? 'edit' : 'quick'; confirmDelete = false; render(); return;
+        openId = id; confirmDelete = false;
+        if (view === 'settings') mode = 'edit'; else { mode = 'buy'; buyTab = 'where'; }
+        render(); return;
       }
+      if (act === 'count'){ openId = id; mode = 'quick'; confirmDelete = false; render(); return; }
       if (act === 'back'){
         if (it && editDraft && JSON.stringify(editDraft) !== JSON.stringify(clean(it))){ await save(id, editDraft); toast('저장했습니다'); }
         editDraft = null; openId = null; mode = null; render(); return;
       }
       if (act === 'cancel'){
-        if (mode === 'buy'){ mode = 'quick'; }
-        else if (mode === 'field'){ mode = 'edit'; }
+        if (mode === 'field'){ mode = 'edit'; }
         else { openId = null; mode = null; draft = null; }
         confirmDelete = false; render(); return;
       }
-      if (act === 'buy'){ mode = 'buy'; buyTab = 'where'; render(); return; }
       if (act === 'buytab'){ buyTab = btn.dataset.val; render(); return; }
       if (act === 'price-check'){
         if (!it || btn.disabled) return;
@@ -1192,25 +1239,23 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       if (act === 'new-next'){
         if (newStep === 1){ const v = $('#n-name').value.trim(); if (!v){ $('#n-name').focus(); return; } draft.name = v; const uv = ($('#n-unit') || {}).value; if (uv && uv.trim()) draft.unit = uv.trim(); }
         if (newStep === 3 && !draft.shops.length){ toast('판매처를 하나 이상 골라 주세요'); return; }
+        if (newStep === 4){ const v = $('#n-rate'); if (v){ const n = Number(v.value); if (draft.rateMode === 'daysPer') draft.daysPer = n > 0 ? n : 6; else draft.dailyRate = n >= 0 ? n : 0.71; } }
         newStep++; render(); return;
       }
-      if (act === 'new-save'){
-        if (btn.disabled) return; btn.disabled = true;
-        const v = $('#n-rate'); if (v){ const n = Number(v.value); if (draft.rateMode === 'daysPer') draft.daysPer = n > 0 ? n : 6; else draft.dailyRate = n >= 0 ? n : 0.71; }
-        const doc = { name: draft.name, owner: draft.owner, shops: draft.shops.slice(), unit: draft.unit, rateMode: draft.rateMode, leadDays: draft.leadDays, candidates: [], baseQty: null, baseAt: null, history: [] };
-        doc.shop = doc.shops.length === 1 && doc.shops[0] === 'kurly' ? 'kurly' : doc.shops.length === 1 && doc.shops[0] === 'naver' ? 'smartstore' : 'both';
-        if (draft.rateMode === 'daysPer'){ doc.daysPer = draft.daysPer; doc.dailyRate = Math.round((1 / draft.daysPer) * 1000) / 1000; } else { doc.dailyRate = draft.dailyRate; }
-        mode = null; draft = null; render(); await create(doc); toast(`${doc.name} 추가했습니다`); if (!db) render(); return;
+      // 5단계: 건너뛰기 = 품목만, 저장 = 품목 + 첫 구매 기록
+      if (act === 'new-skip' || act === 'new-save'){
+        if (btn.disabled) return;
+        let doc = newDoc(), bought = false;
+        if (act === 'new-save'){ const b = readBuyForm(draft.owner, now); if (!b) return; doc = buyDoc(doc, b.qty, b.price, b.shop, now, b.boughtAt, b.by); bought = true; }
+        btn.disabled = true;
+        mode = null; draft = null; render(); await create(doc);
+        toast(bought ? `${doc.name} 추가하고 구매 기록했습니다` : `${doc.name} 추가했습니다`); if (!db) render(); return;
       }
       if (!it) return;
       if (act === 'count-save'){ const v = $('#cnt-' + id).value; if (v === '') return; await doCount(it, Math.max(0, Number(v)), now); openId = null; mode = null; }
       if (act === 'buy-save'){
-        const qty = Number($('#b-qty').value); if (!(qty > 0)) { $('#b-qty').focus(); return; }
-        const price = Number($('#b-price').value) || 0; const shop = $('#b-shop').value;
-        const dv = $('#b-date').value; const boughtAt = dv ? dateAtNoon(dv) : now;
-        const by = it.owner === 'mung' ? buyBy : null;
-        if (it.owner === 'mung' && !by){ toast('누가 샀는지 골라 주세요'); return; }
-        await doBuy(it, qty, price, shop, now, boughtAt, by); openId = null; mode = null;
+        const b = readBuyForm(it.owner, now); if (!b) return;
+        await doBuy(it, b.qty, b.price, b.shop, now, b.boughtAt, b.by); openId = null; mode = null;
       }
       if (act === 'field-save'){
         if (!editDraft) editDraft = clean(it);
