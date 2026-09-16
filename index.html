@@ -359,6 +359,24 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .gr .v i{font-style:normal;color:hsl(var(--border));font-size:18px;line-height:1}
 .gr .v .face{width:22px;height:22px}
 .gr.danger{justify-content:center;color:hsl(var(--destructive));font-weight:600}
+
+/* ===== 시트 높이·간격 통일 / 페이지 헤더 ===== */
+.sheet-panel{min-height:46vh;display:flex;flex-direction:column}
+#sheet-body{flex:1;display:flex;flex-direction:column}
+.sform{flex:1;display:flex;flex-direction:column;gap:14px}
+.sform .fbtn{margin-top:auto;padding-top:20px}
+.sform.steps{gap:0}
+.sform.steps .dots{margin:2px 0 16px}
+.stepbody{flex:1;display:flex;flex-direction:column;gap:12px}
+.stepbody .q{margin:0}
+.stepbody .qs{margin:0 0 4px}
+.pagehead{display:flex;align-items:center;gap:12px;padding:2px 0 6px}
+.backbtn{width:40px;height:40px;border-radius:9999px;border:0;background:hsl(var(--muted));color:hsl(var(--foreground));display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:0 0 auto}
+.pagehead-title{margin:0;font-size:22px;font-weight:700;letter-spacing:-0.01em}
+/* 통계 카드 너비 통일 */
+.container .container{margin:0;max-width:none;width:100%}
+#stats > .card{width:100%}
+.chart svg{max-width:100%}
 </style>
 <style>
 /* ===== login ===== */
@@ -391,7 +409,11 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   </div>
 </div>
 <div class="container">
-  <header class="top">
+  <div class="pagehead" id="pagehead" hidden>
+    <button class="backbtn" type="button" data-act="back" aria-label="설정으로"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.6 5.6c-2.1 2-4.2 4.1-6.2 6.3 2 2.1 4.1 4.2 6.2 6.3"/></svg></button>
+    <h2 id="pagehead-title" class="pagehead-title"></h2>
+  </div>
+  <header class="top" id="apphead">
     <h1 id="title">moongventory</h1>
   </header>
   <div class="date-row">
@@ -608,6 +630,11 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     $('#view-stats').hidden = view !== 'stats';
     $('#view-settings').hidden = view !== 'settings';
     const ow = $('#owners'); if (ow) ow.hidden = view === 'stats';
+    // 설정 > 품목 편집: 앱 헤더를 페이지 헤더로 교체
+    const editing = view === 'settings' && (mode === 'edit' || mode === 'field') && items.some(x => x.id === openId);
+    $('#apphead').hidden = editing; document.querySelector('.date-row').hidden = editing; document.querySelector('.views').hidden = editing;
+    $('#pagehead').hidden = !editing;
+    if (editing) $('#pagehead-title').textContent = (items.find(x => x.id === openId) || {}).name || '';
     document.querySelectorAll('.vtab[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
     if (view === 'stock') renderStock(now);
     else if (view === 'stats') renderStats(now);
@@ -887,8 +914,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const row = (key, val) => `<button class="gr" type="button" data-act="field" data-key="${key}"><span>${FIELD_LABEL[key]}</span><span class="v">${val}<i>›</i></span></button>`;
     const ownerVal = OWNER[it.owner] ? `${faceImg(it.owner)} ${OWNER[it.owner]}` : '미정';
     const rateRow = it.rateMode === 'daysPer' ? row('daysPer', fmtRate(it.daysPer || 0) + '일') : row('rate', fmtRate(Number(it.dailyRate) || 0) + u);
-    return `<div class="topbar"><button class="btn ghost sm" type="button" data-act="back">‹ 설정</button><b>${esc(it.name)}</b><span style="width:56px"></span></div>
-      <div class="grp"><div class="gt">기본</div>${row('name', esc(it.name))}${row('owner', ownerVal)}${row('unit', u)}</div>
+    return `<div class="grp"><div class="gt">기본</div>${row('name', esc(it.name))}${row('owner', ownerVal)}${row('unit', u)}</div>
       <div class="grp"><div class="gt">소비</div>${row('rateMode', it.rateMode === 'daysPer' ? '1' + u + '가 며칠' : '하루에 몇 ' + u)}${rateRow}${row('leadDays', (it.leadDays ?? 3) + '일')}</div>
       <div class="grp"><div class="gt">구매처</div>${row('shops', esc(shopLabel(it)))}${row('links', ((it.candidates || []).filter(c => c.url).length || 0) + '개')}</div>
       <div class="grp"><button class="gr danger" type="button" data-act="field" data-key="delete"><span>품목 삭제</span></button></div>`;
@@ -922,13 +948,13 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const d = draft; const u = esc(d.unit || '개');
     const dots = `<div class="dots">${[1,2,3,4].map(i => `<i class="${i === newStep ? 'on' : ''}"></i>`).join('')}</div>`;
     const nav = (last) => `<div class="fbtn">${newStep > 1 ? `<button class="btn outline" type="button" data-act="new-prev">이전</button>` : `<button class="btn outline" type="button" data-act="cancel">취소</button>`}<button class="btn primary" type="button" data-act="${last ? 'new-save' : 'new-next'}">${last ? '저장' : '다음'}</button></div>`;
-    if (newStep === 1) return `${dots}<p class="q">무엇을 채우나요?</p><p class="qs">1/4 · 이름만 넣으면 됩니다</p><input class="input fi big-in" type="text" id="n-name" value="${esc(d.name)}" placeholder="예: 두유" data-autofocus>${nav(false)}`;
-    if (newStep === 2) return `${dots}<p class="q">누가 먹나요?</p><p class="qs">2/4</p><div class="faces">${['mom','dad','mung'].map(k => faceBtn(k, d.owner === k)).join('')}</div>${nav(false)}`;
-    if (newStep === 3) return `${dots}<p class="q">어디서 사나요?</p><p class="qs">3/4 · 여러 곳이면 여러 개</p><div class="chips" id="fv-shops">${SHOP_KEYS.map(k => shopChip(k, d.shops.includes(k))).join('')}</div>${nav(false)}`;
-    return `${dots}<p class="q">얼마나 먹나요?</p><p class="qs">4/4 · 대략이면 됩니다. 나중에 스스로 맞춰집니다</p>
+    const wrap = (body, last) => `<div class="sform steps">${dots}<div class="stepbody">${body}</div>${nav(last)}</div>`;
+    if (newStep === 1) return wrap(`<p class="q">무엇을 채우나요?</p><p class="qs">1/4 · 이름만 넣으면 됩니다</p><input class="input fi big-in" type="text" id="n-name" value="${esc(d.name)}" placeholder="예: 두유" data-autofocus>`, false);
+    if (newStep === 2) return wrap(`<p class="q">누가 먹나요?</p><p class="qs">2/4</p><div class="faces">${['mom','dad','mung'].map(k => faceBtn(k, d.owner === k)).join('')}</div>`, false);
+    if (newStep === 3) return wrap(`<p class="q">어디서 사나요?</p><p class="qs">3/4 · 여러 곳이면 여러 개</p><div class="chips" id="fv-shops">${SHOP_KEYS.map(k => shopChip(k, d.shops.includes(k))).join('')}</div>`, false);
+    return wrap(`<p class="q">얼마나 먹나요?</p><p class="qs">4/4 · 대략이면 됩니다. 나중에 스스로 맞춰집니다</p>
       <div class="seg" style="margin-bottom:12px">${segBtn('rateMode','perDay','하루에 몇 ' + u, d.rateMode !== 'daysPer')}${segBtn('rateMode','daysPer','1' + u + '가 며칠', d.rateMode === 'daysPer')}</div>
-      ${d.rateMode === 'daysPer' ? stepper('n-rate', fmtRate(d.daysPer), 0.5, 0.5, '일') : stepper('n-rate', fmtRate(d.dailyRate), 0.1, 0, u)}
-      ${nav(true)}`;
+      ${d.rateMode === 'daysPer' ? stepper('n-rate', fmtRate(d.daysPer), 0.5, 0.5, '일') : stepper('n-rate', fmtRate(d.dailyRate), 0.1, 0, u)}`, true);
   }
 
   // ---------- actions ----------
