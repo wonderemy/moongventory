@@ -1027,7 +1027,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     if (newStep === 3) return wrap(`<p class="q">어디서 사나요?</p><p class="qs">3/4 · 여러 곳이면 여러 개</p><div class="chips" id="fv-shops">${SHOP_KEYS.map(k => shopChip(k, d.shops.includes(k))).join('')}</div>`, false);
     return wrap(`<p class="q">얼마나 먹나요?</p><p class="qs">4/4 · 대략이면 됩니다. 나중에 스스로 맞춰집니다</p>
       <div class="seg" style="margin-bottom:12px">${segBtn('rateMode','perDay','하루에 몇 ' + u, d.rateMode !== 'daysPer')}${segBtn('rateMode','daysPer', esc(josa('한 ' + (d.unit || '개'), '이', '가')) + ' 며칠', d.rateMode === 'daysPer')}</div>
-      ${d.rateMode === 'daysPer' ? stepper('n-rate', fmtRate(d.daysPer), 0.5, 0.5, '일') : stepper('n-rate', fmtRate(d.dailyRate), 0.1, 0, u)}`, true);
+      ${d.rateMode === 'daysPer' ? stepper('n-rate', fmtRate(d.daysPer), 0.5, 0.5, '') : stepper('n-rate', fmtRate(d.dailyRate), 0.1, 0, '')}`, true);
   }
 
   // ---------- actions ----------
