@@ -379,6 +379,14 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .container .container{margin:0;max-width:none;width:100%}
 #stats > .card{width:100%}
 .chart svg{max-width:100%}
+
+/* ===== pull to refresh ===== */
+html,body{overscroll-behavior-y:contain}
+.ptr{position:fixed;top:0;left:50%;z-index:25;width:38px;height:38px;border-radius:9999px;background:hsl(var(--card));box-shadow:var(--shadow-sm);color:hsl(var(--primary));display:flex;align-items:center;justify-content:center;transform:translate(-50%,-50px);opacity:0;pointer-events:none;transition:transform .15s,opacity .15s}
+.ptr.drag{transition:none}
+.ptr.spin svg{animation:ptr-spin .8s linear infinite}
+@keyframes ptr-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.ptr.spin svg{animation-duration:1.6s}}
 </style>
 <style>
 /* ===== login ===== */
@@ -474,6 +482,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     <div id="sheet-body"></div>
   </div>
 </div>
+<div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4.5h-4.5"/></svg></div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -1152,6 +1161,36 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     });
   }
 
+  // ---------- pull to refresh (touch) ----------
+  (function(){
+    const ptr = $('#ptr'); if (!ptr) return;
+    const MAX = 72, ARM = 60; let startY = null, pulling = false, dy = 0, busy = false;
+    function setPull(d){ dy = Math.min(MAX, d * 0.5); ptr.style.transform = `translate(-50%, ${-50 + dy + 10}px) rotate(${dy * 4}deg)`; ptr.style.opacity = String(Math.min(1, dy / 30)); }
+    document.addEventListener('touchstart', ev => {
+      if (busy || !$('#sheet').hidden) return;
+      if (window.scrollY <= 0){ startY = ev.touches[0].clientY; pulling = false; ptr.classList.add('drag'); }
+      else startY = null;
+    }, {passive: true});
+    document.addEventListener('touchmove', ev => {
+      if (startY == null || busy) return;
+      const d = ev.touches[0].clientY - startY;
+      if (d > 8 && window.scrollY <= 0){ pulling = true; setPull(d); if (ev.cancelable) ev.preventDefault(); }
+    }, {passive: false});
+    async function done(){
+      busy = true; ptr.classList.remove('drag'); ptr.classList.add('spin');
+      ptr.style.transform = 'translate(-50%, 14px)'; ptr.style.opacity = '1';
+      try { if (typeof window.__refresh === 'function') await window.__refresh(); else render(); } catch (e) { console.error(e); }
+      setTimeout(() => { ptr.classList.remove('spin'); ptr.style.transform = ''; ptr.style.opacity = ''; busy = false; }, 500);
+    }
+    document.addEventListener('touchend', () => {
+      if (startY == null) return;
+      const armed = pulling && dy >= ARM * 0.5;
+      startY = null; pulling = false; ptr.classList.remove('drag');
+      if (armed) done(); else { ptr.style.transform = ''; ptr.style.opacity = ''; }
+      dy = 0;
+    }, {passive: true});
+  })();
+
   // ---------- boot ----------
   items = lsLoad();
   render();
@@ -1185,6 +1224,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const cfg = window.MOONG_CONFIG || {};
     if (!cfg.url || !cfg.key || !window.supabase){ $('#footnote').textContent = '이 기기에만 저장됩니다.'; return; }
     sb = window.supabase.createClient(cfg.url, cfg.key);
+    window.__refresh = () => loadAll();
     async function start(){
       hideLogin();
       try { await loadAll(); } catch (e) { console.error(e); $('#footnote').textContent = '저장소에 연결하지 못했습니다.'; return; }
