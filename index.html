@@ -413,20 +413,21 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 #stats > .card{width:100%}
 .chart svg{max-width:100%}
 
-/* ===== v30: 카드 탭 = 구매, 숫자 탭 = 수량 고치기 / 추가 5단계 ===== */
-.tile{position:relative}
-.tile-main{position:absolute;inset:0;width:100%;height:100%;background:none;border:0;padding:0;margin:0;cursor:pointer;border-radius:inherit;-webkit-tap-highlight-color:transparent}
-.tile-main:focus{outline:none}
-.tile-main:focus-visible{outline:none;box-shadow:inset 0 0 0 2px hsl(var(--ring))}
-@media (hover:hover){.tile-main:hover{background:hsl(var(--muted) / .45)}}
-.tile-head{position:relative;pointer-events:none;cursor:default}
-.qbtn{pointer-events:auto;display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:4px 8px;margin:-4px -8px;border-radius:10px;font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color .15s}
-.qbtn svg{display:block;color:hsl(var(--muted-foreground));opacity:.75;flex:0 0 auto;margin-left:1px}
-.qbtn:active{background:hsl(var(--muted))}
-.qbtn:focus{outline:none}
-.qbtn:focus-visible{outline:none;box-shadow:0 0 0 2px hsl(var(--ring))}
+/* ===== v30: 구매 탭 · 설정은 헤더 아이콘 · 추가 5단계 · 시트 버튼 위 여백 16px 통일 ===== */
+.date-actions{display:flex;align-items:center;gap:8px}
+.gearbtn{width:38px;height:38px;border-radius:9999px;border:0;background:hsl(var(--muted));color:hsl(var(--foreground));display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;margin:0;-webkit-tap-highlight-color:transparent;transition:background-color .15s}
+.gearbtn svg{display:block}
+.gearbtn[aria-pressed="true"]{background:hsl(var(--butter))}
+.gearbtn:focus{outline:none}
+.gearbtn:focus-visible{outline:none;box-shadow:0 0 0 2px hsl(var(--background)),0 0 0 4px hsl(var(--ring))}
+.row-head .right{display:flex;align-items:center;gap:8px}
 .skipbtn{width:100%;height:42px;margin-top:8px;font-weight:500;color:hsl(var(--muted-foreground))}
-@media (prefers-reduced-motion: reduce){.qbtn{transition:none}}
+/* 시트: 마지막 내용과 버튼 사이 = 16px (sform gap 14 + 2) */
+.sform > .fbtn{margin-top:2px}
+.sform.steps > .fbtn{margin-top:16px}
+.sform > .qs{margin:0}
+#price-msg:empty{display:none}
+@media (prefers-reduced-motion: reduce){.gearbtn{transition:none}}
 
 /* ===== pull to refresh ===== */
 .ptr{position:fixed;top:0;left:50%;z-index:1;width:38px;height:38px;border-radius:9999px;background:hsl(var(--card));box-shadow:var(--shadow-sm);color:hsl(var(--primary));display:flex;align-items:center;justify-content:center;transform:translate(-50%,-44px);opacity:0;pointer-events:none}
@@ -484,14 +485,17 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   </header>
   <div class="date-row">
     <div class="date" id="stamp"></div>
+    <div class="date-actions">
+    <button class="gearbtn" type="button" data-view="settings" aria-pressed="false" aria-label="설정" title="설정"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 7.1c5 .2 10 .2 15-.1"/><path d="M4.5 12.1c5 .2 10 .2 15-.1"/><path d="M4.5 17.1c5 .2 10 .2 15-.1"/><circle cx="9" cy="7" r="2.1" style="fill:hsl(var(--muted))"/><circle cx="15" cy="12" r="2.1" style="fill:hsl(var(--muted))"/><circle cx="8" cy="17" r="2.1" style="fill:hsl(var(--muted))"/></svg></button>
     <button class="addbtn" type="button" id="add" aria-label="품목 추가" title="품목 추가"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.4c.25 2.2.1 4.4 0 6.6-.1 2.2.05 4.4.2 6.6"/><path d="M5.4 12.1c2.2-.25 4.4-.1 6.6 0 2.2.1 4.4-.05 6.6-.2"/></svg></button>
+    </div>
   </div>
 
   <div class="views" role="tablist" aria-label="화면">
     <div class="vt">
       <button class="vtab" type="button" role="tab" data-view="stock" aria-pressed="true">재고</button>
+      <button class="vtab" type="button" role="tab" data-view="buy" aria-pressed="false">구매</button>
       <button class="vtab" type="button" role="tab" data-view="stats" aria-pressed="false">통계</button>
-      <button class="vtab" type="button" role="tab" data-view="settings" aria-pressed="false">설정</button>
     </div>
     <div class="tabs owners" id="owners" role="group" aria-label="먹는 사람">
       <button class="tab icon" data-owner="all" aria-pressed="true" type="button" aria-label="전체" title="전체"><img src="data:image/png;base64,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" alt="" width="28" height="28"></button>
@@ -507,6 +511,13 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       <section id="round" hidden></section>
       <section class="tiles" id="list" aria-live="polite"></section>
       <span id="footnote" class="meta"></span>
+    </div>
+  </div>
+
+  <!-- 구매: 품목을 누르면 '샀어요' 폼 -->
+  <div id="view-buy" hidden>
+    <div class="container" style="gap:12px">
+      <section class="card" id="buylist" aria-live="polite"></section>
     </div>
   </div>
 
@@ -551,12 +562,12 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
   const $ = (s, el=document) => el.querySelector(s);
   const listEl = $('#list'), roundEl = $('#round'), toastEl = $('#toast'), stampEl = $('#stamp');
-  const statsEl = $('#stats'), settingsEl = $('#settings');
+  const statsEl = $('#stats'), settingsEl = $('#settings'), buyEl = $('#buylist');
 
   let db = null;
   let items = [];
   let prices = {};
-  let view = 'stock';       // 'stock' | 'stats' | 'settings'
+  let view = 'stock';       // 'stock' | 'buy' | 'stats' | 'settings'(헤더 아이콘)
   let openId = null;        // expanded row (stock or settings)
   let mode = null;          // stock: 'quick' | 'buy' ; settings: 'edit' | 'new'
   let owner = 'all';
@@ -698,6 +709,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const now = Date.now();
     { const d = new Date(now); const wd = ['일','월','화','수','목','금','토'][d.getDay()]; stampEl.textContent = String(d.getMonth()+1).padStart(2,'0') + '월 ' + String(d.getDate()).padStart(2,'0') + '일 ' + wd + '요일'; }
     $('#view-stock').hidden = view !== 'stock';
+    $('#view-buy').hidden = view !== 'buy';
     $('#view-stats').hidden = view !== 'stats';
     $('#view-settings').hidden = view !== 'settings';
     const ow = $('#owners'); if (ow) ow.hidden = view === 'stats';
@@ -706,8 +718,9 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     $('#apphead').hidden = editing; document.querySelector('.date-row').hidden = editing; document.querySelector('.views').hidden = editing;
     $('#pagehead').hidden = !editing;
     if (editing) $('#pagehead-title').textContent = (editDraft && editDraft.name) || (items.find(x => x.id === openId) || {}).name || '';
-    document.querySelectorAll('.vtab[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+    document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
     if (view === 'stock') renderStock(now);
+    else if (view === 'buy') renderBuyPage(now);
     else if (view === 'stats') renderStats(now);
     else renderSettings(now);
     // 바텀 시트: 수량/구매(quick·buy) · 품목 추가(new, 단계형) · 필드 편집(field)
@@ -742,7 +755,6 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       .sort((a, b) => (RANK[a.st] - RANK[b.st]) || ((a.e ? a.e.daysLeft : 0) - (b.e ? b.e.daysLeft : 0)) || (a.it.name || '').localeCompare(b.it.name || ''));
   }
 
-  const PEN = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.2 19.8c.3-1.5.6-3 1.1-4.4L15.9 4.8c1-.9 2.4-.8 3.3.1.9.9 1 2.3.1 3.3L8.7 18.7c-1.5.4-3 .8-4.5 1.1z"/><path d="M14.3 6.5c1.1.9 2.1 1.9 3.1 3"/></svg>`;
   function renderStock(now){
     renderRound(now);
     listEl.className = 'tiles';
@@ -756,19 +768,40 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       // 막대 = 남은 양 / 기준량(최근 구매 수량 또는 기준 수량)
       let pct = 0;
       if (e){ const ref = Math.max(e.est, (s.last && s.last.qty) || it.baseQty || 1); pct = Math.max(0, Math.min(100, Math.round(e.est / ref * 100))); }
-      // 카드 전체 = 구매 시트, 숫자 = 수량 고치기 시트
+      // 카드 = 수량 고치기 시트. 구매는 '구매' 탭에서.
       html += `<div class="tile" data-id="${it.id}">
-        <button class="tile-main" type="button" data-act="toggle" aria-label="${esc(it.name)} 구매"></button>
-        <div class="tile-head">
+        <button class="tile-head" type="button" data-act="toggle">
           <div class="t"><span class="name">${esc(it.name)}</span>${faceImg(it.owner)}</div>
-          <div class="big-row"><button class="qbtn" type="button" data-act="count" aria-label="${esc(it.name)} 수량 고치기" title="수량 고치기"><span class="big">${e ? fmtQty(e.est) : '—'}<small>${e ? unit : ''}</small></span>${PEN}</button>${(st === 'order' || st === 'soon') ? `<span class="badge ${BADGE[st]}">${LABEL[st]}</span>` : ''}</div>
+          <div class="big-row"><div class="big">${e ? fmtQty(e.est) : '—'}<small>${e ? unit : ''}</small></div>${(st === 'order' || st === 'soon') ? `<span class="badge ${BADGE[st]}">${LABEL[st]}</span>` : ''}</div>
           <div class="bar"><i class="f-${st}" style="width:${pct}%"></i></div>
           <div class="meta">${metaBits.join(' · ')}</div>
-        </div>
+        </button>
       </div>`;
     }
     if (!html) html = `<div class="empty" style="grid-column:1/-1">표시할 품목이 없습니다.</div>`;
     listEl.innerHTML = html;
+  }
+
+  // 구매 탭: 주문할 것부터 위로. 누르면 '샀어요' 폼
+  function renderBuyPage(now){
+    let html = '';
+    for (const {it, st} of sortedVisible(now, true)){
+      const s = statsOf(it);
+      const sub = s.last
+        ? '최근 ' + fmtDate(s.last.at) + ' · ' + (SHOP_NAME[s.last.shop] || '기타') + (s.last.price ? ' · ' + fmtWon(s.last.price) : '') + (s.last.by && OWNER[s.last.by] ? ' · ' + OWNER[s.last.by] : '')
+        : '구매 기록 없음';
+      html += `<div class="row" data-id="${it.id}">
+        <button class="row-head simple" type="button" data-act="toggle">
+          <div>
+            <div class="name">${esc(it.name)}${faceImg(it.owner)}</div>
+            <div class="meta">${sub}</div>
+          </div>
+          <span class="right">${(st === 'order' || st === 'soon') ? `<span class="badge ${BADGE[st]}">${LABEL[st]}</span>` : ''}<span class="chev">›</span></span>
+        </button>
+      </div>`;
+    }
+    if (!html) html = `<div class="empty">표시할 품목이 없습니다.</div>`;
+    buyEl.innerHTML = html;
   }
 
   function renderQuick(it, e){
@@ -778,7 +811,6 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       <div class="fg"><span class="fl">현재 수량 <em>${e ? '추정 ' + fmtQty(e.est) + unit : '아직 없음'}</em></span>
         <div class="stepper2"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="-1" aria-label="하나 빼기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button><input class="input fi" type="number" inputmode="numeric" id="cnt-${it.id}" value="${guess}" min="0" step="1"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="1" aria-label="하나 더하기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6c.15 4 .15 8 0 12"/><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button></div>
       </div>
-      <p class="qs" style="margin:0">산 게 아니라 실제 개수를 맞추는 거예요. 새로 샀다면 카드를 눌러 ‘샀어요’에 적어 주세요.</p>
       <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">취소</button><button class="btn primary" type="button" data-act="count-save">저장</button></div>
     </div>`;
   }
@@ -1132,7 +1164,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     }
     const sm = ev.target.closest('.tab[data-smode]');
     if (sm){ statsMode = sm.dataset.smode; try { localStorage.setItem('pantry.statsMode', statsMode); } catch(e){} document.querySelectorAll('.tab[data-smode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.smode === statsMode))); render(); return; }
-    const navBtn = ev.target.closest('.vtab[data-view]');
+    const navBtn = ev.target.closest('[data-view]');
     if (navBtn){
       const cur = items.find(x => x.id === openId);
       if (cur && editDraft && JSON.stringify(editDraft) !== JSON.stringify(clean(cur))){ save(cur.id, editDraft).then(() => toast('저장했습니다')).catch(console.error); }
@@ -1159,10 +1191,11 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     try {
       if (act === 'toggle'){
         openId = id; confirmDelete = false;
-        if (view === 'settings') mode = 'edit'; else { mode = 'buy'; buyTab = 'where'; }
+        if (view === 'settings') mode = 'edit';
+        else if (view === 'buy'){ mode = 'buy'; buyTab = 'done'; }
+        else mode = 'quick';
         render(); return;
       }
-      if (act === 'count'){ openId = id; mode = 'quick'; confirmDelete = false; render(); return; }
       if (act === 'back'){
         if (it && editDraft && JSON.stringify(editDraft) !== JSON.stringify(clean(it))){ await save(id, editDraft); toast('저장했습니다'); }
         editDraft = null; openId = null; mode = null; render(); return;
@@ -1356,7 +1389,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
 
   // ---------- swipe: 재고 ↔ 통계 ↔ 설정 ----------
   (function(){
-    const ORDER = ['stock', 'stats', 'settings'];
+    const ORDER = ['stock', 'buy', 'stats'];
     let sx = null, sy = null, tracking = false;
     document.addEventListener('touchstart', ev => {
       if (!$('#sheet').hidden || (mode === 'edit' || mode === 'field')) { sx = null; return; }
