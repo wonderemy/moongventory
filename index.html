@@ -343,6 +343,9 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .face-pick img{width:64px;height:64px;border-radius:9999px;background:hsl(var(--muted));padding:8px;object-fit:contain;opacity:.55;filter:grayscale(.4)}
 .face-pick.on{color:hsl(var(--foreground))}
 .face-pick.on img{background:hsl(var(--butter));box-shadow:0 0 0 3px hsl(var(--primary));opacity:1;filter:none}
+.faces.small{justify-content:flex-start;gap:14px;margin:0}
+.faces.small .face-pick img{width:48px;height:48px;padding:6px}
+.buys .face{width:18px;height:18px;vertical-align:-4px;display:inline-block}
 .fbtn{display:flex;gap:8px;margin-top:4px}
 .fbtn .btn{flex:1;height:48px;font-size:15px;font-weight:700}
 .dots{display:flex;gap:6px;justify-content:center;margin:2px 0 14px}
@@ -516,6 +519,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   let confirmDelete = false;
   let draft = null, newStep = 1, fieldKey = null;   // 추가(C 단계형)·필드 편집 상태
   let editDraft = null;                             // 편집 페이지 초안(뒤로 갈 때 저장)
+  let buyBy = null; try { buyBy = localStorage.getItem('pantry.me') || null; } catch(e){}   // 뭉이 것 누가 샀는지(기기별 기억)
   let roundOpen = false;    // 컬리 회차 카드는 접힌 채로 시작
   let statsMode = 'text';   // 통계 보기: 'text' | 'chart'
   try { statsMode = localStorage.getItem('pantry.statsMode') || 'text'; } catch(e){}
@@ -700,7 +704,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       const unit = esc(it.unit || '개');
       const metaBits = [];
       if (e) metaBits.push(e.est <= 0 ? '다 떨어짐' : fmtDays(e.daysLeft) + ' 남음'); else metaBits.push('수량을 입력해 주세요');
-      metaBits.push(s.last ? '최근 ' + fmtDate(s.last.at) : '구매 기록 없음');
+      metaBits.push(s.last ? '최근 ' + fmtDate(s.last.at) + (s.last.by && OWNER[s.last.by] ? ' ' + OWNER[s.last.by] : '') : '구매 기록 없음');
       // 막대 = 남은 양 / 기준량(최근 구매 수량 또는 기준 수량)
       let pct = 0;
       if (e){ const ref = Math.max(e.est, (s.last && s.last.qty) || it.baseQty || 1); pct = Math.max(0, Math.min(100, Math.round(e.est / ref * 100))); }
@@ -772,6 +776,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
             ${shops.map(sh => `<option value="${sh}" ${sh === defShop ? 'selected' : ''}>${SHOP_NAME[sh]}</option>`).join('')}
             <option value="other">기타</option>
           </select></div>
+          ${it.owner === 'mung' ? `<div class="field" style="align-items:flex-start"><span class="label" style="padding-top:8px">누가 샀어요?</span><div class="faces small" id="b-by">${['mom','dad'].map(k => `<button class="face-pick ${(buyBy || '') === k ? 'on' : ''}" type="button" data-act="pickby" data-val="${k}" aria-pressed="${(buyBy || '') === k}"><img src="${(document.querySelector('.tab.icon[data-owner=' + k + '] img') || {}).src || ''}" alt="${OWNER[k]}"><span>${OWNER[k]}</span></button>`).join('')}</div></div>` : ''}
           <div class="field"><label class="label" for="b-date">구매일</label><input class="input" type="date" id="b-date" value="${todayISO()}" max="${todayISO()}" style="width:auto"></div>
           <div class="field"><label class="label" for="b-qty">수량</label><input class="input w" type="number" inputmode="numeric" id="b-qty" value="${def.count || ''}" min="1" step="1" placeholder="0"><span class="hint">${unit}</span></div>
           <div class="field"><label class="label" for="b-price">가격</label><input class="input w" type="number" inputmode="numeric" id="b-price" value="${def.price || ''}" min="0" step="10" placeholder="0"><span class="hint">원 (모르면 비워 두기)</span></div>
@@ -901,7 +906,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
           ${stat('한 번에 이만큼', s.avgQty ? fmtQty(s.avgQty) + unit : '—', s.count ? '구매 ' + s.count + '회 · ' + rateText(it) : rateText(it))}
         </div>
         ${buys.length ? `<ul class="buys">${buys.map(({b, per, delta, gap}) => `<li>
-            <span>${fmtDate(b.at)} · ${b.shop ? SHOP_NAME[b.shop] || b.shop : '—'} · ${fmtQty(b.qty)}${unit}${gap != null && gap >= 1 ? ` <em>${Math.round(gap)}일 만에</em>` : ''}</span>
+            <span>${fmtDate(b.at)} · ${b.shop ? SHOP_NAME[b.shop] || b.shop : '—'} · ${fmtQty(b.qty)}${unit}${b.by && OWNER[b.by] ? ` · ${faceImg(b.by).replace('width="26" height="26"', 'width="18" height="18"')}` : ''}${gap != null && gap >= 1 ? ` <em>${Math.round(gap)}일 만에</em>` : ''}</span>
             <span>${b.price ? fmtWon(b.price) + (per ? ` <em>${unit}당 ${fmtWon(per)}</em>` : '') : ''}${delta != null && pricedCount >= 2 ? ` <b class="${deltaCls(delta)}">${delta > 0 ? '▲' : delta < 0 ? '▼' : '='}${Math.abs(delta) >= 0.01 ? Math.round(Math.abs(delta) * 100) + '%' : ''}</b>` : ''}</span>
           </li>`).join('')}</ul>` : `<div class="buys"><li>아직 구매 기록이 없어요. [구매]로 넣으면 쌓여요.</li></div>`}
       </section>`;
@@ -1011,7 +1016,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     toast(learned != null ? `${it.name} ${fmtQty(n)}${u}. 소비량을 다시 잡았습니다` : `${it.name} ${fmtQty(n)}${u}로 고쳤습니다`);
   }
   // 구매 = 채움. 수량을 더하고 가격·판매처를 기록.
-  async function doBuy(it, qty, price, shop, now, boughtAt){
+  async function doBuy(it, qty, price, shop, now, boughtAt, by){
     const e = estimate(it, now);
     const doc = clean(it);
     const nowIso = new Date(now).toISOString();
@@ -1021,7 +1026,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     doc.baseQty = Math.max(0, Math.round(((e ? e.est : 0) + qty - eaten) * 10) / 10); doc.baseAt = nowIso;
     const at = new Date(when).toISOString();
     doc.lastBuyAt = at;
-    const h = (it.history || []).slice(-59); h.push({at, type: 'buy', qty, price: price || null, shop});
+    const h = (it.history || []).slice(-59); const ev = {at, type: 'buy', qty, price: price || null, shop}; if (by) ev.by = by; h.push(ev);
     h.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     doc.history = h;
     await save(it.id, doc);
@@ -1096,6 +1101,11 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         }
         return;
       }
+      if (act === 'pickby'){
+        buyBy = btn.dataset.val; try { localStorage.setItem('pantry.me', buyBy); } catch(e){}
+        btn.parentElement.querySelectorAll('.face-pick').forEach(b => { const on = b === btn; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+        return;
+      }
       if (act === 'unitpick'){
         const inp = $('#n-unit') || $('#fv'); if (inp) inp.value = btn.dataset.val;
         btn.parentElement.querySelectorAll('.chip2').forEach(b => b.classList.toggle('on', b === btn));
@@ -1133,7 +1143,9 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         const qty = Number($('#b-qty').value); if (!(qty > 0)) { $('#b-qty').focus(); return; }
         const price = Number($('#b-price').value) || 0; const shop = $('#b-shop').value;
         const dv = $('#b-date').value; const boughtAt = dv ? dateAtNoon(dv) : now;
-        await doBuy(it, qty, price, shop, now, boughtAt); openId = null; mode = null;
+        const by = it.owner === 'mung' ? buyBy : null;
+        if (it.owner === 'mung' && !by){ toast('누가 샀는지 골라 주세요'); return; }
+        await doBuy(it, qty, price, shop, now, boughtAt, by); openId = null; mode = null;
       }
       if (act === 'field-save'){
         if (!editDraft) editDraft = clean(it);
