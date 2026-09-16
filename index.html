@@ -306,6 +306,16 @@ header.top{display:flex;align-items:center;margin-bottom:-6px}
 .alert .chev{width:28px;height:28px;border-radius:9999px;background:hsl(0 0% 100% / .6);display:flex;align-items:center;justify-content:center;flex:0 0 auto;transition:transform .2s}
 .alert .chev.open{transform:rotate(180deg)}
 @media (prefers-reduced-motion: reduce){.alert .chev{transition:none}}
+
+/* ===== bottom sheet ===== */
+.sheet{position:fixed;inset:0;z-index:30}
+.sheet-bg{position:absolute;inset:0;background:rgb(40 25 15 / .35)}
+.sheet-panel{position:absolute;left:0;right:0;bottom:0;max-height:88vh;overflow:auto;background:hsl(var(--card));border-radius:20px 20px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgb(0 0 0 / .15);animation:sheet-up .22s ease-out}
+@keyframes sheet-up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.sheet-panel{animation:none}}
+.grab{width:36px;height:4px;border-radius:9999px;background:hsl(var(--border));margin:0 auto 12px}
+.sheet-h{margin:0 0 12px;font-size:17px;font-weight:600}
+.sheet .form{gap:12px}
 </style>
 <style>
 /* ===== login ===== */
@@ -389,6 +399,14 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
 </div>
 
 
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-bg" data-act="cancel"></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="grab"></div>
+    <h2 id="sheet-title" class="sheet-h">품목</h2>
+    <div id="sheet-body"></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -550,6 +568,14 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     if (view === 'stock') renderStock(now);
     else if (view === 'stats') renderStats(now);
     else renderSettings(now);
+    // 바텀 시트: 품목 추가 / 설정
+    const sheet = $('#sheet');
+    if (mode === 'new' || mode === 'edit'){
+      const it = mode === 'edit' ? items.find(x => x.id === openId) : null;
+      $('#sheet-title').textContent = mode === 'new' ? '품목 추가' : (it ? it.name : '설정');
+      $('#sheet-body').innerHTML = renderForm(it || {});
+      sheet.hidden = false; document.body.style.overflow = 'hidden';
+    } else { sheet.hidden = true; document.body.style.overflow = ''; }
     const focusEl = document.querySelector('[data-autofocus]');
     if (focusEl) focusEl.focus({preventScroll:false});
   }
@@ -743,6 +769,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   }
 
   function renderStats(now){
+    document.querySelectorAll('.tab[data-smode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.smode === statsMode)));
     let html = '';
     for (const {it, e} of sortedVisible(now, false)){
       const s = statsOf(it);
@@ -789,7 +816,6 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
 
   function renderSettings(now){
     let html = '';
-    if (mode === 'new') html += `<div class="row" data-id="__new"><div class="panel">${renderForm({})}</div></div>`;
     const visible = items.filter(it => owner === 'all' || (it.owner || 'me') === owner);
     for (const it of visible.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''))){
       html += `<div class="row" data-id="${it.id}">
@@ -800,7 +826,6 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
           </div>
           <span class="chev">›</span>
         </button>
-        ${openId === it.id && mode === 'edit' ? `<div class="panel">${renderForm(it)}</div>` : ''}
       </div>`;
     }
     if (!html) html = `<div class="empty">표시할 품목이 없습니다.</div>`;
@@ -925,22 +950,23 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.owner === owner)));
       render(); return;
     }
-    if (ev.target.closest('#add')){ view = 'settings'; mode = 'new'; openId = null; confirmDelete = false; render(); window.scrollTo({top: 0}); return; }
+    if (ev.target.closest('#add')){ mode = 'new'; openId = null; confirmDelete = false; render(); return; }
 
     const btn = ev.target.closest('[data-act]'); if (!btn) return;
     if (btn.dataset.act === 'round-toggle'){ roundOpen = !roundOpen; renderRound(Date.now()); return; }
-    const row = btn.closest('.row, .tile'); const id = row && row.dataset.id;
+    const row = btn.closest('.row, .tile'); const id = row ? row.dataset.id : ((mode === 'edit' || mode === 'new') ? openId : null);
     const it = items.find(x => x.id === id);
     const now = Date.now();
     const act = btn.dataset.act;
     try {
       if (act === 'toggle'){
+        if (view === 'settings'){ openId = id; mode = 'edit'; confirmDelete = false; render(); return; }
         openId = openId === id ? null : id;
-        mode = openId ? (view === 'settings' ? 'edit' : 'quick') : null;
+        mode = openId ? 'quick' : null;
         confirmDelete = false; render(); return;
       }
       if (act === 'cancel'){
-        if (mode === 'new'){ mode = null; }
+        if (mode === 'new' || mode === 'edit'){ mode = null; openId = null; }
         else if (mode === 'buy'){ mode = 'quick'; }
         else { openId = null; mode = null; }
         confirmDelete = false; render(); return;
