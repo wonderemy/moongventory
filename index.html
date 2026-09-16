@@ -354,6 +354,9 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .sheet .form .field input[type="date"].input{width:auto;min-width:160px}
 .sheet .form .field select.input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E837B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:16px;padding-right:36px}
 .sheet .form .field input.input.w{width:120px;text-align:right}
+#price-check{gap:8px}
+#price-check svg{display:block}
+#price-check.spin svg{animation:ptr-spin .9s linear infinite}
 .reco{margin:0;padding:10px 12px;border-radius:12px;background:hsl(var(--muted));font-size:14px;font-weight:600}
 .reco.good{background:hsl(var(--mint));color:hsl(150 40% 22%)}
 .dots{display:flex;gap:6px;justify-content:center;margin:2px 0 14px}
@@ -799,7 +802,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       return `<div class="sform">${seg}
         <p class="reco ${r.cls}">${r.text}</p>
         <div class="shops">${shopCards(it)}</div>
-        ${(it.candidates || []).some(c => c.url) && typeof window.__fetchPrice === 'function' ? `<button class="btn outline" type="button" data-act="price-check" id="price-check">지금 가격 확인</button><p class="meta" id="price-msg" style="text-align:center;margin:-6px 0 0"></p>` : ''}
+        ${(it.candidates || []).some(c => c.url) && typeof window.__fetchPrice === 'function' ? `<button class="btn outline" type="button" data-act="price-check" id="price-check"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.6 12.2a7.6 7.6 0 1 1-2.2-5.5"/><path d="M19.8 4.4v4.3h-4.3"/></svg><span>지금 가격 확인</span></button><p class="meta" id="price-msg" style="text-align:center;margin:-6px 0 0"></p>` : ''}
         <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">닫기</button></div>
       </div>`;
     }
@@ -1119,7 +1122,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         if (!it || btn.disabled) return;
         const links = (it.candidates || []).filter(c => c.url && shopOf(c.url));
         if (!links.length){ toast('상품 링크를 먼저 넣어 주세요'); return; }
-        btn.disabled = true; btn.textContent = '확인 중…'; const msg = $('#price-msg');
+        btn.disabled = true; btn.classList.add('spin'); const lbl = btn.querySelector('span'); if (lbl) lbl.textContent = '확인 중…'; const msg = $('#price-msg');
         const doc = JSON.parse(JSON.stringify(prices[it.id] || {})); const results = [];
         for (const c of links){
           const shop = shopOf(c.url);
