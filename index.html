@@ -318,7 +318,9 @@ header.top{display:flex;align-items:center;margin-bottom:-6px}
 @keyframes sheet-up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion: reduce){.sheet-panel{animation:none}}
 .grab{width:36px;height:4px;border-radius:9999px;background:hsl(var(--border));margin:0 auto 12px}
-.sheet-h{margin:0 0 12px;font-size:17px;font-weight:600}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+.sheet-h{margin:0;font-size:17px;font-weight:600}
+.sheet-head .dots{margin:0}
 .sheet .form{gap:12px}
 
 /* ===== 시트 폼 문법(C 추가·B 편집·수량 시트) ===== */
@@ -396,9 +398,9 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .sheet-panel{display:flex;flex-direction:column}
 #sheet-body{flex:1;display:flex;flex-direction:column}
 .sform{display:flex;flex-direction:column;gap:14px}
-.sform .fbtn{margin-top:12px}
+.sheet .fbtn{margin-top:16px}
 .sform.steps{gap:0}
-.sform.steps .dots{margin:2px 0 16px}
+
 .stepbody{display:flex;flex-direction:column;gap:12px}
 .stepbody .q{margin:0}
 .stepbody .qs{margin:0 0 4px}
@@ -517,7 +519,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   <div class="sheet-bg" data-act="cancel"></div>
   <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <div class="grab"></div>
-    <h2 id="sheet-title" class="sheet-h">품목</h2>
+    <div class="sheet-head"><h2 id="sheet-title" class="sheet-h">품목</h2><div id="sheet-aside"></div></div>
     <div id="sheet-body"></div>
   </div>
 </div>
@@ -695,6 +697,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     else renderSettings(now);
     // 바텀 시트: 수량/구매(quick·buy) · 품목 추가(new, 단계형) · 필드 편집(field)
     const sheet = $('#sheet');
+    $('#sheet-aside').innerHTML = '';
     const cur = items.find(x => x.id === openId);
     if (mode === 'quick' || mode === 'buy'){
       if (!cur){ mode = null; sheet.hidden = true; document.body.style.overflow = ''; }
@@ -705,6 +708,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       }
     } else if (mode === 'new'){
       $('#sheet-title').textContent = '품목 추가';
+      $('#sheet-aside').innerHTML = `<div class="dots">${[1,2,3,4].map(i => `<i class="${i === newStep ? 'on' : ''}"></i>`).join('')}</div>`;
       $('#sheet-body').innerHTML = renderNewStep();
       sheet.hidden = false; document.body.style.overflow = 'hidden';
     } else if (mode === 'field' && cur){
@@ -1017,7 +1021,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const d = draft; const u = esc(d.unit || '개');
     const dots = `<div class="dots">${[1,2,3,4].map(i => `<i class="${i === newStep ? 'on' : ''}"></i>`).join('')}</div>`;
     const nav = (last) => `<div class="fbtn">${newStep > 1 ? `<button class="btn outline" type="button" data-act="new-prev">이전</button>` : `<button class="btn outline" type="button" data-act="cancel">취소</button>`}<button class="btn primary" type="button" data-act="${last ? 'new-save' : 'new-next'}">${last ? '저장' : '다음'}</button></div>`;
-    const wrap = (body, last) => `<div class="sform steps">${dots}<div class="stepbody">${body}</div>${nav(last)}</div>`;
+    const wrap = (body, last) => `<div class="sform steps"><div class="stepbody">${body}</div>${nav(last)}</div>`;
     if (newStep === 1) return wrap(`<p class="q">무엇을 채우나요?</p><p class="qs">1/4 · 이름과 세는 단위</p><input class="input fi big-in" type="text" id="n-name" value="${esc(d.name)}" placeholder="예: 두유" data-autofocus><div class="fg" style="margin-top:6px"><span class="fl">세는 단위</span>${unitChips(d.unit)}<input class="input fi" type="text" id="n-unit" value="${esc(d.unit)}" placeholder="직접 입력"></div>`, false);
     if (newStep === 2) return wrap(`<p class="q">누가 먹나요?</p><p class="qs">2/4</p><div class="faces">${['mom','dad','mung'].map(k => faceBtn(k, d.owner === k)).join('')}</div>`, false);
     if (newStep === 3) return wrap(`<p class="q">어디서 사나요?</p><p class="qs">3/4 · 여러 곳이면 여러 개</p><div class="chips" id="fv-shops">${SHOP_KEYS.map(k => shopChip(k, d.shops.includes(k))).join('')}</div>`, false);
