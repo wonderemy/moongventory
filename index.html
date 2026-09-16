@@ -1456,8 +1456,20 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         .on('postgres_changes', { event: '*', schema: 'public', table: 'prices' }, () => loadAll().catch(console.error)).subscribe();
       document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAll().catch(console.error); });
     }
+    // 구글에서 돌아올 때 주소에 실린 에러(#error_description=… / ?error=…)를 로그인 화면에 보여 준다
+    let authErr = '';
+    try {
+      const h = new URLSearchParams(location.hash.replace(/^#/, '')), q = new URLSearchParams(location.search);
+      const code = h.get('error_code') || h.get('error') || q.get('error_code') || q.get('error') || '';
+      const desc = h.get('error_description') || q.get('error_description') || '';
+      if (code || desc){
+        const d = decodeURIComponent(desc.replace(/\+/g, ' '));
+        authErr = /signup/i.test(code + d) ? '이 계정은 아직 허용되지 않았어요. 뭉맘에게 이메일을 알려 주세요. (' + d + ')' : '로그인이 안 됐어요: ' + (d || code);
+        history.replaceState(null, '', location.pathname);
+      }
+    } catch(e){}
     const { data: { session } } = await sb.auth.getSession();
-    if (session) start(); else showLogin('');
+    if (session) start(); else showLogin(authErr);
     sb.auth.onAuthStateChange((ev, sess) => { if (ev === 'SIGNED_IN' && sess && loginEl.hidden === false) start(); if (ev === 'SIGNED_OUT') showLogin(''); });
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   })();
