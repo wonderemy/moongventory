@@ -302,6 +302,8 @@ header.top{display:flex;align-items:center;margin-bottom:-6px}
 .tile .t{align-items:flex-start}
 .tile .t .name{padding-top:3px}
 .face{width:26px;height:26px;border-radius:9999px;flex:0 0 auto;object-fit:contain}
+.row-head .face{width:24px;height:24px}
+.stat-head .face{width:28px;height:28px}
 .big-row{display:flex;align-items:center;gap:10px}
 .alert .chev{width:28px;height:28px;border-radius:9999px;background:hsl(0 0% 100% / .6);display:flex;align-items:center;justify-content:center;flex:0 0 auto;transition:transform .2s}
 .alert .chev.open{transform:rotate(180deg)}
@@ -361,13 +363,13 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .gr.danger{justify-content:center;color:hsl(var(--destructive));font-weight:600}
 
 /* ===== 시트 높이·간격 통일 / 페이지 헤더 ===== */
-.sheet-panel{min-height:46vh;display:flex;flex-direction:column}
+.sheet-panel{display:flex;flex-direction:column}
 #sheet-body{flex:1;display:flex;flex-direction:column}
-.sform{flex:1;display:flex;flex-direction:column;gap:14px}
-.sform .fbtn{margin-top:auto;padding-top:20px}
+.sform{display:flex;flex-direction:column;gap:14px}
+.sform .fbtn{margin-top:20px}
 .sform.steps{gap:0}
 .sform.steps .dots{margin:2px 0 16px}
-.stepbody{flex:1;display:flex;flex-direction:column;gap:12px}
+.stepbody{display:flex;flex-direction:column;gap:12px}
 .stepbody .q{margin:0}
 .stepbody .qs{margin:0 0 4px}
 .pagehead{display:flex;align-items:center;gap:12px;padding:2px 0 6px}
@@ -864,7 +866,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       const range = pers.length >= 2 ? unit + '당 ' + fmtWon(Math.min(...pers)) + '~' + fmtWon(Math.max(...pers)) : '';
       const stat = (k, v, sub, cls) => `<div class="stat"><div class="k">${k}</div><div class="v ${cls || ''}">${v}${sub ? `<small>${sub}</small>` : ''}</div></div>`;
       const buys = rows.slice(-6).reverse();
-      const head = `<div class="stat-head"><h2>${esc(it.name)}</h2>${OWNER[it.owner] ? `<span class="badge tag">${OWNER[it.owner]}</span>` : ''}</div>`;
+      const head = `<div class="stat-head"><h2>${esc(it.name)}</h2>${faceImg(it.owner)}</div>`;
       if (statsMode === 'chart'){
         const charts = priceChart(rows, unit, s.avgPer) + gapChart(rows, s.every);
         html += `<section class="card">${head}${charts || `<div class="buys"><li>가격이 있는 구매가 2건 넘으면 그래프가 그려집니다.</li></div>`}</section>`;
@@ -899,7 +901,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       html += `<div class="row" data-id="${it.id}">
         <button class="row-head simple" type="button" data-act="toggle">
           <div>
-            <div class="name">${esc(it.name)}${OWNER[it.owner] ? `<span class="badge tag">${OWNER[it.owner]}</span>` : '<span class="badge outline" style="font-weight:500">먹는 사람 미정</span>'}</div>
+            <div class="name">${esc(it.name)}${OWNER[it.owner] ? faceImg(it.owner) : '<span class="badge outline" style="font-weight:500">먹는 사람 미정</span>'}</div>
             <div class="meta">${shopLabel(it)} · ${rateText(it)}</div>
           </div>
           <span class="chev">›</span>
