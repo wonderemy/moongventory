@@ -818,8 +818,8 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         </select></div>
         ${it.owner === 'mung' ? `<div class="field" style="align-items:flex-start"><span class="label" style="padding-top:8px">누가<i class="req">*</i></span><div class="faces small" id="b-by">${['mom','dad'].map(k => `<button class="face-pick ${(buyBy || '') === k ? 'on' : ''}" type="button" data-act="pickby" data-val="${k}" aria-pressed="${(buyBy || '') === k}"><img src="${(document.querySelector('.tab.icon[data-owner=' + k + '] img') || {}).src || ''}" alt="${OWNER[k]}"><span>${OWNER[k]}</span></button>`).join('')}</div></div>` : ''}
         <div class="field"><label class="label" for="b-date">언제<i class="req">*</i></label><input class="input" type="date" id="b-date" value="${todayISO()}" max="${todayISO()}"></div>
-        <div class="field"><label class="label" for="b-qty">몇 ${unit}<i class="req">*</i></label><input class="input" type="number" inputmode="numeric" id="b-qty" value="${def.count || ''}" min="1" step="1" placeholder="0"></div>
-        <div class="field"><label class="label" for="b-price">얼마에 <em class="lbl-sub">원</em></label><input class="input" type="number" inputmode="numeric" id="b-price" value="${def.price || ''}" min="0" step="10" placeholder="0"></div>
+        <div class="field"><label class="label" for="b-qty">몇 개<i class="req">*</i></label><input class="input" type="number" inputmode="numeric" id="b-qty" value="${def.count || ''}" min="1" step="1" placeholder="0"></div>
+        <div class="field"><label class="label" for="b-price">얼마</label><input class="input" type="number" inputmode="numeric" id="b-price" value="${def.price || ''}" min="0" step="10" placeholder="0"></div>
       </div>
       <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">취소</button><button class="btn primary" type="button" data-act="buy-save">기록</button></div>
     </div>`;
