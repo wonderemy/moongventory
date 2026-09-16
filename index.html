@@ -348,6 +348,9 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 .buys .face{width:18px;height:18px;vertical-align:-4px;display:inline-block}
 .fbtn{display:flex;gap:8px;margin-top:4px}
 .fbtn .btn{flex:1;height:48px;font-size:15px;font-weight:700}
+.fbtn.light .btn{height:42px;font-size:14px;font-weight:500}
+.reco{margin:0;padding:10px 12px;border-radius:12px;background:hsl(var(--muted));font-size:14px;font-weight:600}
+.reco.good{background:hsl(var(--mint));color:hsl(150 40% 22%)}
 .dots{display:flex;gap:6px;justify-content:center;margin:2px 0 14px}
 .dots i{width:8px;height:8px;border-radius:9999px;background:hsl(var(--border))}
 .dots i.on{background:hsl(var(--primary));width:22px}
@@ -529,6 +532,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   let confirmDelete = false;
   let draft = null, newStep = 1, fieldKey = null;   // 추가(C 단계형)·필드 편집 상태
   let editDraft = null;                             // 편집 페이지 초안(뒤로 갈 때 저장)
+  let buyTab = 'where';   // 구매 시트 탭: 'where' 어디서 살까 | 'done' 샀어요
   let buyBy = null; try { buyBy = localStorage.getItem('pantry.me') || null; } catch(e){}   // 뭉이 것 누가 샀는지(기기별 기억)
   let roundOpen = false;    // 컬리 회차 카드는 접힌 채로 시작
   let statsMode = 'text';   // 통계 보기: 'text' | 'chart'
@@ -738,7 +742,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       <div class="fg"><span class="fl">현재 수량 <em>${e ? '추정 ' + fmtQty(e.est) + unit : '아직 없음'}</em></span>
         <div class="stepper2"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="-1" aria-label="하나 빼기">−</button><input class="input fi" type="number" inputmode="numeric" id="cnt-${it.id}" value="${guess}" min="0" step="1"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="1" aria-label="하나 더하기">+</button></div>
       </div>
-      <div class="fbtn"><button class="btn outline" type="button" data-act="count-save">수량 수정</button><button class="btn primary" type="button" data-act="buy">구매</button></div>
+      <div class="fbtn light"><button class="btn outline" type="button" data-act="buy">구매</button><button class="btn outline" type="button" data-act="count-save">수량 수정</button></div>
     </div>`;
   }
 
@@ -768,34 +772,41 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     }).join('');
   }
 
+  function recommendText(it){
+    const p = prices[it.id] || {}; const shops = shopsFor(it); const unit = it.unit || '개';
+    const priced = shops.filter(sh => (p[sh.shop] && p[sh.shop].options || []).some(o => o.price && o.count));
+    const best = bestOption(it);
+    if (!best) return { text: '가격을 아직 몰라요. 링크로 직접 확인해 보세요.', cls: '' };
+    if (priced.length === 1) return { text: `${SHOP_NAME[best.shop]} 가격만 알아요 · ${unit}당 ${fmtWon(best.per)}`, cls: '' };
+    return { text: `${josa(SHOP_NAME[best.shop], '이', '가')} 더 싸요 · ${unit}당 ${fmtWon(best.per)}`, cls: 'good' };
+  }
   function renderBuy(it, e){
     const unit = esc(it.unit || '개');
     const best = bestOption(it);
     const shops = shopsFor(it).map(s => s.shop);
     const defShop = best ? best.shop : shops[0];
     const def = best || cheapestIn(it, defShop) || {};
-    return `<div class="panel">
-      <div>
-        <div class="label" style="margin-bottom:8px">어디서 살까</div>
+    const seg = `<div class="seg" style="margin-bottom:12px"><button class="segb ${buyTab === 'where' ? 'on' : ''}" type="button" data-act="buytab" data-val="where">어디서 살까</button><button class="segb ${buyTab === 'done' ? 'on' : ''}" type="button" data-act="buytab" data-val="done">샀어요</button></div>`;
+    if (buyTab === 'where'){
+      const r = recommendText(it);
+      return `<div class="sform">${seg}
+        <p class="reco ${r.cls}">${r.text}</p>
         <div class="shops">${shopCards(it)}</div>
+        <div class="fbtn light"><button class="btn outline" type="button" data-act="cancel">닫기</button><button class="btn primary" type="button" data-act="buytab" data-val="done">사고 나서 기록하기</button></div>
+      </div>`;
+    }
+    return `<div class="sform">${seg}
+      <div class="form">
+        <div class="field"><label class="label" for="b-shop">어디서</label><select class="input" id="b-shop">
+          ${shops.map(sh => `<option value="${sh}" ${sh === defShop ? 'selected' : ''}>${SHOP_NAME[sh]}</option>`).join('')}
+          <option value="other">기타</option>
+        </select></div>
+        ${it.owner === 'mung' ? `<div class="field" style="align-items:flex-start"><span class="label" style="padding-top:8px">누가</span><div class="faces small" id="b-by">${['mom','dad'].map(k => `<button class="face-pick ${(buyBy || '') === k ? 'on' : ''}" type="button" data-act="pickby" data-val="${k}" aria-pressed="${(buyBy || '') === k}"><img src="${(document.querySelector('.tab.icon[data-owner=' + k + '] img') || {}).src || ''}" alt="${OWNER[k]}"><span>${OWNER[k]}</span></button>`).join('')}</div></div>` : ''}
+        <div class="field"><label class="label" for="b-date">언제</label><input class="input" type="date" id="b-date" value="${todayISO()}" max="${todayISO()}" style="width:auto"></div>
+        <div class="field"><label class="label" for="b-qty">몇 ${unit}</label><input class="input w" type="number" inputmode="numeric" id="b-qty" value="${def.count || ''}" min="1" step="1" placeholder="0"><span class="hint">${unit}</span></div>
+        <div class="field"><label class="label" for="b-price">얼마에</label><input class="input w" type="number" inputmode="numeric" id="b-price" value="${def.price || ''}" min="0" step="10" placeholder="0"><span class="hint">원 · 몰라도 돼요</span></div>
       </div>
-      <div>
-        <div class="label" style="margin-bottom:8px">샀어요</div>
-        <div class="form">
-          <div class="field"><label class="label" for="b-shop">판매처</label><select class="input" id="b-shop">
-            ${shops.map(sh => `<option value="${sh}" ${sh === defShop ? 'selected' : ''}>${SHOP_NAME[sh]}</option>`).join('')}
-            <option value="other">기타</option>
-          </select></div>
-          ${it.owner === 'mung' ? `<div class="field" style="align-items:flex-start"><span class="label" style="padding-top:8px">누가 샀어요?</span><div class="faces small" id="b-by">${['mom','dad'].map(k => `<button class="face-pick ${(buyBy || '') === k ? 'on' : ''}" type="button" data-act="pickby" data-val="${k}" aria-pressed="${(buyBy || '') === k}"><img src="${(document.querySelector('.tab.icon[data-owner=' + k + '] img') || {}).src || ''}" alt="${OWNER[k]}"><span>${OWNER[k]}</span></button>`).join('')}</div></div>` : ''}
-          <div class="field"><label class="label" for="b-date">구매일</label><input class="input" type="date" id="b-date" value="${todayISO()}" max="${todayISO()}" style="width:auto"></div>
-          <div class="field"><label class="label" for="b-qty">수량</label><input class="input w" type="number" inputmode="numeric" id="b-qty" value="${def.count || ''}" min="1" step="1" placeholder="0"><span class="hint">${unit}</span></div>
-          <div class="field"><label class="label" for="b-price">가격</label><input class="input w" type="number" inputmode="numeric" id="b-price" value="${def.price || ''}" min="0" step="10" placeholder="0"><span class="hint">원 (모르면 비워 두기)</span></div>
-        </div>
-      </div>
-      <div class="actions end">
-        <button class="btn ghost" type="button" data-act="cancel">취소</button>
-        <button class="btn primary" type="button" data-act="buy-save">저장</button>
-      </div>
+      <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">취소</button><button class="btn primary" type="button" data-act="buy-save">기록</button></div>
     </div>`;
   }
 
@@ -1094,7 +1105,8 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         else { openId = null; mode = null; draft = null; }
         confirmDelete = false; render(); return;
       }
-      if (act === 'buy'){ mode = 'buy'; render(); return; }
+      if (act === 'buy'){ mode = 'buy'; buyTab = 'where'; render(); return; }
+      if (act === 'buytab'){ buyTab = btn.dataset.val; render(); return; }
       if (act === 'step'){
         const inp = $(btn.dataset.target); if (!inp) return;
         const stepv = Number(btn.dataset.delta); const min = Number(inp.min || 0);
@@ -1286,7 +1298,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     sb = window.supabase.createClient(cfg.url, cfg.key);
     async function start(){
       hideLogin();
-      try { await loadAll(); } catch (e) { console.error(e); $('#footnote').textContent = '저장소에 연결하지 못했습니다.'; return; }
+      try { await loadAll(); toast('불러왔어요'); } catch (e) { console.error(e); $('#footnote').textContent = '저장소에 연결하지 못했습니다.'; return; }
       sb.channel('moong').on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => loadAll().catch(console.error))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'prices' }, () => loadAll().catch(console.error)).subscribe();
       document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAll().catch(console.error); });
