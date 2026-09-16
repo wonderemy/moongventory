@@ -382,8 +382,8 @@ input.input.fi[type="number"]{text-align:center;font-weight:700;font-size:18px}
 
 /* ===== pull to refresh ===== */
 html,body{overscroll-behavior-y:contain}
-.ptr{position:fixed;top:0;left:50%;z-index:25;width:38px;height:38px;border-radius:9999px;background:hsl(var(--card));box-shadow:var(--shadow-sm);color:hsl(var(--primary));display:flex;align-items:center;justify-content:center;transform:translate(-50%,-50px);opacity:0;pointer-events:none;transition:transform .15s,opacity .15s}
-.ptr.drag{transition:none}
+.ptr{position:fixed;top:0;left:50%;z-index:1;width:38px;height:38px;border-radius:9999px;background:hsl(var(--card));box-shadow:var(--shadow-sm);color:hsl(var(--primary));display:flex;align-items:center;justify-content:center;transform:translate(-50%,-44px);opacity:0;pointer-events:none}
+.container{position:relative;z-index:2;will-change:transform}
 .ptr.spin svg{animation:ptr-spin .8s linear infinite}
 @keyframes ptr-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){.ptr.spin svg{animation-duration:1.6s}}
@@ -1161,32 +1161,37 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     });
   }
 
-  // ---------- pull to refresh (touch) ----------
+  // ---------- pull to refresh (touch): 화면이 따라 내려오고 위 빈자리에 스피너 ----------
   (function(){
-    const ptr = $('#ptr'); if (!ptr) return;
-    const MAX = 72, ARM = 60; let startY = null, pulling = false, dy = 0, busy = false;
-    function setPull(d){ dy = Math.min(MAX, d * 0.5); ptr.style.transform = `translate(-50%, ${-50 + dy + 10}px) rotate(${dy * 4}deg)`; ptr.style.opacity = String(Math.min(1, dy / 30)); }
+    const ptr = $('#ptr'); const page = document.querySelector('.container'); if (!ptr || !page) return;
+    const MAX = 96, ARM = 60, HOLD = 56; let startY = null, pulling = false, dy = 0, busy = false;
+    function place(d, animate){
+      page.style.transition = animate ? 'transform .25s ease-out' : 'none';
+      ptr.style.transition = animate ? 'transform .25s ease-out, opacity .2s' : 'none';
+      page.style.transform = d ? `translateY(${d}px)` : '';
+      ptr.style.transform = `translate(-50%, ${d - 44}px) rotate(${d * 3}deg)`;
+      ptr.style.opacity = String(Math.min(1, d / 28));
+    }
     document.addEventListener('touchstart', ev => {
       if (busy || !$('#sheet').hidden) return;
-      if (window.scrollY <= 0){ startY = ev.touches[0].clientY; pulling = false; ptr.classList.add('drag'); }
-      else startY = null;
+      if (window.scrollY <= 0){ startY = ev.touches[0].clientY; pulling = false; } else startY = null;
     }, {passive: true});
     document.addEventListener('touchmove', ev => {
       if (startY == null || busy) return;
       const d = ev.touches[0].clientY - startY;
-      if (d > 8 && window.scrollY <= 0){ pulling = true; setPull(d); if (ev.cancelable) ev.preventDefault(); }
+      if (d > 6 && window.scrollY <= 0){ pulling = true; dy = Math.min(MAX, d * 0.55); place(dy, false); if (ev.cancelable) ev.preventDefault(); }
     }, {passive: false});
     async function done(){
-      busy = true; ptr.classList.remove('drag'); ptr.classList.add('spin');
-      ptr.style.transform = 'translate(-50%, 14px)'; ptr.style.opacity = '1';
+      busy = true; ptr.classList.add('spin'); place(HOLD, true); ptr.style.transform = `translate(-50%, ${HOLD - 44}px)`;
+      const t0 = Date.now();
       try { if (typeof window.__refresh === 'function') await window.__refresh(); else render(); } catch (e) { console.error(e); }
-      setTimeout(() => { ptr.classList.remove('spin'); ptr.style.transform = ''; ptr.style.opacity = ''; busy = false; }, 500);
+      setTimeout(() => { ptr.classList.remove('spin'); place(0, true); busy = false; }, Math.max(0, 500 - (Date.now() - t0)));
     }
     document.addEventListener('touchend', () => {
       if (startY == null) return;
-      const armed = pulling && dy >= ARM * 0.5;
-      startY = null; pulling = false; ptr.classList.remove('drag');
-      if (armed) done(); else { ptr.style.transform = ''; ptr.style.opacity = ''; }
+      const armed = pulling && dy >= ARM * 0.55;
+      startY = null; pulling = false;
+      if (armed) done(); else place(0, true);
       dy = 0;
     }, {passive: true});
   })();
