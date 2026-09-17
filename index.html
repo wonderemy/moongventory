@@ -660,8 +660,8 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   const BADGE = {count:'outline', order:'destructive', soon:'default', ok:'secondary'};
 
   function fmtQty(n){ return String(Math.round(n)); }
-  // '한 통에 며칠' 품목은 쓰다 만 통도 한 통으로 센다(0.7통 → 1통). 개수 품목은 반올림.
-  function showQty(it, n){ return String(it.rateMode === 'daysPer' ? Math.ceil(n - 0.001) : Math.round(n)); }
+  // '한 통에 며칠' 품목은 소수 한 자리(0.7통 = 70% 남음, 1.7통 = 여분 하나 + 70%). 개수 품목은 반올림.
+  function showQty(it, n){ return String(it.rateMode === 'daysPer' ? Math.round(n * 10) / 10 : Math.round(n)); }
   function fmtRate(n){ return (Math.round(n*100)/100).toString(); }
   function fmtDays(d){ if (!isFinite(d)) return '—'; return Math.floor(d) + '일'; }
   function fmtDate(iso){ const d = new Date(iso); return (d.getMonth()+1) + '/' + d.getDate(); }
@@ -865,7 +865,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const unit = esc(it.unit || '개');
     return `<div class="sform">
       <div class="fg"><span class="fl">현재 수량 <em>${e ? '추정 ' + showQty(it, e.est) + unit : '아직 없음'}</em></span>
-        <div class="stepper2"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="-1" aria-label="하나 빼기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button><input class="input fi" type="number" inputmode="numeric" id="cnt-${it.id}" value="${guess}" min="0" step="1"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="1" aria-label="하나 더하기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6c.15 4 .15 8 0 12"/><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button></div>
+        <div class="stepper2"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="-1" aria-label="하나 빼기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button><input class="input fi" type="number" inputmode="${it.rateMode === 'daysPer' ? 'decimal' : 'numeric'}" id="cnt-${it.id}" value="${guess}" min="0" step="${it.rateMode === 'daysPer' ? '0.1' : '1'}"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="1" aria-label="하나 더하기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6c.15 4 .15 8 0 12"/><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button></div>
       </div>
       <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">취소</button><button class="btn primary" type="button" data-act="count-save">저장</button></div>
     </div>`;
@@ -1188,7 +1188,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     doc.history = pushHist(it, {at, type: 'count', qty: n, rate: learned});
     await save(it.id, doc);
     const u = it.unit || '개';
-    toast(learned != null ? `${it.name} ${fmtQty(n)}${u}. 소비량을 다시 잡았습니다` : `${it.name} ${fmtQty(n)}${u}로 고쳤습니다`);
+    toast(learned != null ? `${it.name} ${showQty(it, n)}${u}. 소비량을 다시 잡았습니다` : `${it.name} ${showQty(it, n)}${u}로 고쳤습니다`);
   }
   // 구매 = 채움. 수량을 더하고 가격·판매처를 기록. it은 저장된 품목이거나 새로 만들 문서
   function buyDoc(it, qty, price, shop, now, boughtAt, by){
