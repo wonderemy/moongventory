@@ -674,14 +674,30 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   }
   function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function buysOf(it){ return (it.history || []).filter(h => h.type === 'buy').slice().sort((a,b) => Date.parse(a.at) - Date.parse(b.at)); }
-  // 직전 구매 → 최근 구매 사이의 '먹는 날' 수를 직전 구매 수량으로 나눈 실제 소비 속도
-  function buyGap(it){
-    const b = buysOf(it); if (b.length < 2) return null;
-    const prev = b[b.length-2], last = b[b.length-1];
-    if (!(prev.qty > 0)) return null;
-    const gap = eatDays(it, Date.parse(prev.at), Date.parse(last.at));
-    if (gap < 1) return null;
-    return { gap: Math.round(gap), qty: prev.qty, daysPer: Math.round(gap / prev.qty * 10) / 10, perDay: Math.round(prev.qty / gap * 100) / 100 };
+  // 실제 소비 속도 = 기간 합산.
+  // ① 실물 카운트가 두 번 있으면: 시작 수량 + 사이에 산 양 − 끝 수량 (겹쳐 샀든 늦게 샀든 정확)
+  // ② 없으면 최근 구매 3번 창: 앞 구매들의 양이 마지막 구매까지 다 소비됐다고 보고, 빈 채로 지난 날(idle)은 뺀다
+  function usageRate(it){
+    const h = (it.history || []).filter(e => e.type === 'buy' || e.type === 'count').slice().sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    const buys = h.filter(e => e.type === 'buy' && e.qty > 0);
+    if (buys.length < 2) return null;
+    const win = buys.slice(-3); const from = Date.parse(win[0].at);
+    const counts = h.filter(e => e.type === 'count' && e.qty != null && Date.parse(e.at) >= from);
+    let consumed = 0, days = 0, basis = '';
+    if (counts.length >= 2){
+      const c0 = counts[0], c1 = counts[counts.length-1];
+      const t0 = Date.parse(c0.at), t1 = Date.parse(c1.at);
+      const bought = buys.filter(b => { const t = Date.parse(b.at); return t > t0 && t <= t1; }).reduce((a, b) => a + b.qty, 0);
+      consumed = c0.qty + bought - c1.qty; days = eatDays(it, t0, t1); basis = `실물 카운트 ${fmtDate(c0.at)}→${fmtDate(c1.at)}`;
+    }
+    if (!(consumed > 0 && days >= 3)){
+      const last = win[win.length-1];
+      consumed = win.slice(0, -1).reduce((a, b) => a + b.qty, 0);
+      days = eatDays(it, from, Date.parse(last.at)) - win.slice(1).reduce((a, b) => a + (Number(b.idle) || 0), 0);
+      basis = `최근 구매 ${win.length}번`;
+    }
+    if (!(consumed > 0 && days >= 1)) return null;
+    return { consumed, days: Math.round(days), basis, daysPer: Math.round(days / consumed * 10) / 10, perDay: Math.round(consumed / days * 100) / 100 };
   }
   function gapText(it, g){ const u = it.unit || '개'; return it.rateMode === 'daysPer' ? `한 ${u}에 ${fmtRate(g.daysPer)}일` : `하루 ${fmtRate(g.perDay)}${u}`; }
   function statsOf(it){
@@ -1084,8 +1100,8 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const u = esc(it.unit || '개');
     const row = (key, val) => `<button class="gr" type="button" data-act="field" data-key="${key}"><span>${FIELD_LABEL[key]}</span><span class="v">${val}<i>›</i></span></button>`;
     const ownerVal = OWNER[it.owner] ? `${faceImg(it.owner)} ${OWNER[it.owner]}` : '아직 없음';
-    const g = buyGap(it);
-    const gapTail = g ? ` <small class="hint">구매 간격 ${it.rateMode === 'daysPer' ? fmtRate(g.daysPer) + '일' : fmtRate(g.perDay) + u}</small>` : '';
+    const g = usageRate(it);
+    const gapTail = g ? ` <small class="hint">실제 ${it.rateMode === 'daysPer' ? fmtRate(g.daysPer) + '일' : fmtRate(g.perDay) + u}</small>` : '';
     const rateRow = it.rateMode === 'daysPer' ? row('daysPer', fmtRate(it.daysPer || 0) + '일' + gapTail) : row('rate', fmtRate(Number(it.dailyRate) || 0) + u + gapTail);
     const links = (it.candidates || []).filter(c => c.url).length;
     return `<div class="grp"><div class="gt">기본</div>${row('name', esc(it.name))}${row('owner', ownerVal)}${row('unit', u)}</div>
@@ -1111,8 +1127,8 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       case 'unit': return `<div class="sform"><span class="fl">고르거나 직접 써도 돼요</span>${unitChips(it.unit || '개')}<input class="input fi" type="text" id="fv" value="${u}" placeholder="예: 봉지">${save}</div>`;
       case 'owner': return `<div class="sform"><div class="faces">${['mom','dad','mung'].map(k => faceBtn(k, it.owner === k)).join('')}</div></div>`;
       case 'rateMode': return `<div class="sform"><div class="seg">${segBtn('rateMode','perDay','하루에 몇 ' + u, it.rateMode !== 'daysPer')}${segBtn('rateMode','daysPer', esc(josa('한 ' + (it.unit || '개'), '이', '가')) + ' 며칠', it.rateMode === 'daysPer')}</div></div>`;
-      case 'rate': { const g = buyGap(it); return `<div class="sform"><div class="fg"><span class="fl">하루에 이만큼 먹어요 <em>평일만 먹으면 '먹는 요일'에서 골라요</em></span>${stepper('fv', fmtRate(Number(it.dailyRate) || 0.71), 0.1, 0, u)}</div>${g ? `<div class="gaprow"><span>직전 구매 ${esc(josa(fmtQty(g.qty) + (it.unit || '개'), '을', '를'))} ${g.gap}일 동안 먹었어요 → 하루 ${fmtRate(g.perDay)}${u}</span><button class="btn ghost" type="button" data-act="use-gap" data-val="${g.perDay}">이 값으로</button></div>` : ''}${save}</div>`; }
-      case 'daysPer': { const g = buyGap(it); return `<div class="sform"><div class="fg"><span class="fl">${esc(josa('한 ' + (it.unit || '개'), '이', '가'))} 며칠 가요 <em>개수를 몰라도 돼요</em></span>${stepper('fv', fmtRate(it.daysPer || 6), 0.5, 0.5, '일')}</div>${g ? `<div class="gaprow"><span>직전 구매 ${esc(josa(fmtQty(g.qty) + (it.unit || '개'), '을', '를'))} ${g.gap}일 만에 다시 샀어요 → 한 ${u}에 ${fmtRate(g.daysPer)}일</span><button class="btn ghost" type="button" data-act="use-gap" data-val="${g.daysPer}">이 값으로</button></div>` : ''}${save}</div>`; }
+      case 'rate': { const g = usageRate(it); return `<div class="sform"><div class="fg"><span class="fl">하루에 이만큼 먹어요 <em>평일만 먹으면 '먹는 요일'에서 골라요</em></span>${stepper('fv', fmtRate(Number(it.dailyRate) || 0.71), 0.1, 0, u)}</div>${g ? `<div class="gaprow"><span>${g.basis}: ${esc(josa(fmtQty(g.consumed) + (it.unit || '개'), '을', '를'))} ${g.days}일 동안 먹었어요 → 하루 ${fmtRate(g.perDay)}${u}</span><button class="btn ghost" type="button" data-act="use-gap" data-val="${g.perDay}">이 값으로</button></div>` : ''}${save}</div>`; }
+      case 'daysPer': { const g = usageRate(it); return `<div class="sform"><div class="fg"><span class="fl">${esc(josa('한 ' + (it.unit || '개'), '이', '가'))} 며칠 가요 <em>개수를 몰라도 돼요</em></span>${stepper('fv', fmtRate(it.daysPer || 6), 0.5, 0.5, '일')}</div>${g ? `<div class="gaprow"><span>${g.basis}: ${esc(josa(fmtQty(g.consumed) + (it.unit || '개'), '을', '를'))} ${g.days}일 동안 먹었어요 → 한 ${u}에 ${fmtRate(g.daysPer)}일</span><button class="btn ghost" type="button" data-act="use-gap" data-val="${g.daysPer}">이 값으로</button></div>` : ''}${save}</div>`; }
       case 'days': { const a = activeDays(it) || [0,1,2,3,4,5,6]; return `<div class="sform"><span class="fl">먹는 요일만 골라요 <em>다 고르면 매일</em></span><div class="chips" id="fv-days">${[1,2,3,4,5,6,0].map(x => `<button class="chip2 ${a.includes(x) ? 'on' : ''}" type="button" data-act="daypick" data-val="${x}" aria-pressed="${a.includes(x)}">${WD[x]}</button>`).join('')}</div>${save}</div>`; }
       case 'leadDays': return `<div class="sform"><div class="fg"><span class="fl">떨어지기 며칠 전에 알려 드릴까요?</span>${stepper('fv', it.leadDays ?? 3, 1, 0, '일 전')}</div>${save}</div>`;
       case 'shops': return `<div class="sform"><span class="fl">여러 곳이면 여러 개 골라요</span><div class="chips" id="fv-shops">${SHOP_KEYS.map(k => shopChip(k, shopKeys(it).includes(k))).join('')}</div>${save}</div>`;
@@ -1183,11 +1199,18 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     doc.baseQty = Math.max(0, Math.round(((e ? e.est : 0) + qty - eaten) * 10) / 10); doc.baseAt = nowIso;
     const at = new Date(when).toISOString();
     doc.lastBuyAt = at;
-    const h = (it.history || []).slice(-59); const ev = {at, type: 'buy', qty, price: price || null, shop}; if (by) ev.by = by; h.push(ev);
+    const h = (it.history || []).slice(-59); const ev = {at, type: 'buy', qty, price: price || null, shop}; if (by) ev.by = by;
+    // 이미 다 떨어진 뒤에 산 거면, 떨어진 날부터 산 날까지는 안 먹은 날 → 소비 속도 계산에서 뺄 수 있게 남긴다
+    const rate0 = Number(it.dailyRate) || 0;
+    if (e && e.est <= 0 && rate0 > 0 && it.baseQty > 0){
+      const t0 = Date.parse(it.baseAt); const ranOut = t0 + calDaysFor(it, t0, it.baseQty / rate0) * DAY;
+      const idle = eatDays(it, ranOut, when); if (idle >= 0.5) ev.idle = Math.round(idle * 10) / 10;
+    }
+    h.push(ev);
     h.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     doc.history = h;
     // 구매가 두 번 이상이면 구매 간격으로 소비 속도를 다시 잡는다(설정에서 언제든 고칠 수 있음).
-    const g = buyGap({...doc, history: h});
+    const g = usageRate({...doc, history: h});
     if (g){
       if (doc.rateMode === 'daysPer'){ doc.daysPer = g.daysPer; doc.dailyRate = Math.round((1 / g.daysPer) * 1000) / 1000; }
       else doc.dailyRate = g.perDay;
@@ -1199,7 +1222,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const doc = buyDoc(it, qty, price, shop, now, boughtAt, by);
     const learn = doc.__learn; delete doc.__learn;
     await save(it.id, doc);
-    toast(`${it.name} +${fmtQty(qty)}${it.unit || '개'} 구매 기록했습니다` + (learn ? ` · 구매 간격으로 ${learn}` : ''));
+    toast(`${it.name} +${fmtQty(qty)}${it.unit || '개'} 구매 기록했습니다` + (learn ? ` · 실제 소비로 ${learn}` : ''));
   }
   document.addEventListener('click', async (ev) => {
     // Naver app hand-off on iOS: try the app scheme, fall back to the web page.
