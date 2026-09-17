@@ -607,12 +607,41 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   }
 
   // ---------- math ----------
+  // 먹는 요일(0=일 … 6=토). 없거나 7개 다 고르면 매일.
+  const WD = ['일','월','화','수','목','금','토'];
+  function activeDays(it){ const d = Array.isArray(it.days) ? it.days.map(Number).filter(x => x >= 0 && x <= 6) : null; return d && d.length && d.length < 7 ? d : null; }
+  function daysText(it){ const a = activeDays(it); if (!a) return '매일'; const k = a.slice().sort().join(''); if (k === '12345') return '평일'; if (k === '06') return '주말'; return [1,2,3,4,5,6,0].filter(x => a.includes(x)).map(x => WD[x]).join('·'); }
+  // from~to 사이의 '먹는 날' 수(소수 포함). 요일 제한이 없으면 달력 날짜 그대로.
+  function eatDays(it, from, to){
+    if (!(to > from)) return 0;
+    const act = activeDays(it); if (!act) return (to - from) / DAY;
+    let sum = 0, t = from;
+    for (let i = 0; i < 4000 && t < to; i++){
+      const d = new Date(t); const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+      if (act.includes(d.getDay())) sum += (Math.min(next, to) - t) / DAY;
+      t = next;
+    }
+    return sum;
+  }
+  // 지금부터 '먹는 날' n일어치가 지나가는 데 걸리는 달력 일수
+  function calDaysFor(it, now, n){
+    if (!isFinite(n)) return Infinity;
+    const act = activeDays(it); if (!act) return n;
+    let left = n, t = now, cal = 0;
+    for (let i = 0; i < 4000 && left > 0; i++){
+      const d = new Date(t); const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+      const frac = (next - t) / DAY;
+      if (act.includes(d.getDay())){ if (left <= frac){ cal += left; left = 0; break; } left -= frac; }
+      cal += frac; t = next;
+    }
+    return cal;
+  }
   function estimate(it, now){
     if (it.baseQty == null || !it.baseAt) return null;
-    const days = Math.max(0, (now - Date.parse(it.baseAt)) / DAY);
+    const days = eatDays(it, Date.parse(it.baseAt), now);
     const rate = Number(it.dailyRate) || 0;
     const est = Math.max(0, it.baseQty - days * rate);
-    const daysLeft = rate > 0 ? est / rate : Infinity;
+    const daysLeft = calDaysFor(it, now, rate > 0 ? est / rate : Infinity);
     return {est, daysLeft, days};
   }
   function statusOf(it, now){
@@ -695,8 +724,9 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   function josa(word, a, b){ const c = (word || '').slice(-1).charCodeAt(0); const has = c >= 0xAC00 && c <= 0xD7A3 && ((c - 0xAC00) % 28) !== 0; return word + (has ? a : b); }
   function rateText(it){
     const u = it.unit || '개';
-    if (it.rateMode === 'daysPer' && it.daysPer) return `한 ${u}에 ${fmtRate(it.daysPer)}일`;
-    return `하루 ${fmtRate(Number(it.dailyRate) || 0)}${u}`;
+    const tail = activeDays(it) ? ' · ' + daysText(it) : '';
+    if (it.rateMode === 'daysPer' && it.daysPer) return `한 ${u}에 ${fmtRate(it.daysPer)}일${tail}`;
+    return `하루 ${fmtRate(Number(it.dailyRate) || 0)}${u}${tail}`;
   }
 
   // ---------- render ----------
@@ -1015,7 +1045,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     statsEl.innerHTML = html;
   }
 
-  const FIELD_LABEL = { name:'이름', owner:'누가 먹어요?', unit:'세는 단위', rateMode:'얼마나 먹어요?', rate:'하루에 먹는 양', daysPer:'한 개가 가는 날', leadDays:'주문 알림', shops:'어디서 사요?', links:'상품 링크', delete:'삭제' };
+  const FIELD_LABEL = { name:'이름', owner:'누가 먹어요?', unit:'세는 단위', rateMode:'얼마나 먹어요?', rate:'하루에 먹는 양', daysPer:'한 개가 가는 날', days:'먹는 요일', leadDays:'주문 알림', shops:'어디서 사요?', links:'상품 링크', delete:'삭제' };
   function renderSettings(now){
     const it = mode === 'edit' || mode === 'field' ? items.find(x => x.id === openId) : null;
     if (it){ if (!editDraft) editDraft = clean(it); settingsEl.className = 'editpage'; settingsEl.innerHTML = renderEditPage({id: it.id, ...editDraft}); return; }
@@ -1044,7 +1074,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const rateRow = it.rateMode === 'daysPer' ? row('daysPer', fmtRate(it.daysPer || 0) + '일') : row('rate', fmtRate(Number(it.dailyRate) || 0) + u);
     const links = (it.candidates || []).filter(c => c.url).length;
     return `<div class="grp"><div class="gt">기본</div>${row('name', esc(it.name))}${row('owner', ownerVal)}${row('unit', u)}</div>
-      <div class="grp"><div class="gt">먹는 양</div>${row('rateMode', it.rateMode === 'daysPer' ? esc(josa('한 ' + (it.unit || '개'), '이', '가')) + ' 며칠 가요' : '하루에 몇 ' + u)}${rateRow}${row('leadDays', (it.leadDays ?? 3) + '일 전')}</div>
+      <div class="grp"><div class="gt">먹는 양</div>${row('rateMode', it.rateMode === 'daysPer' ? esc(josa('한 ' + (it.unit || '개'), '이', '가')) + ' 며칠 가요' : '하루에 몇 ' + u)}${rateRow}${row('days', esc(daysText(it)))}${row('leadDays', (it.leadDays ?? 3) + '일 전')}</div>
       <div class="grp"><div class="gt">사는 곳</div>${row('shops', esc(shopLabel(it)))}${row('links', links ? links + '개' : '없음')}</div>`;
   }
   const faceBtn = (k, on) => `<button class="face-pick ${on ? 'on' : ''}" type="button" data-act="pick" data-key="owner" data-val="${k}" aria-pressed="${on}"><img src="${(document.querySelector('.tab.icon[data-owner=' + k + '] img') || {}).src || ''}" alt="${OWNER[k]}"><span>${OWNER[k]}</span></button>`;
@@ -1066,8 +1096,9 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       case 'unit': return `<div class="sform"><span class="fl">고르거나 직접 써도 돼요</span>${unitChips(it.unit || '개')}<input class="input fi" type="text" id="fv" value="${u}" placeholder="예: 봉지">${save}</div>`;
       case 'owner': return `<div class="sform"><div class="faces">${['mom','dad','mung'].map(k => faceBtn(k, it.owner === k)).join('')}</div></div>`;
       case 'rateMode': return `<div class="sform"><div class="seg">${segBtn('rateMode','perDay','하루에 몇 ' + u, it.rateMode !== 'daysPer')}${segBtn('rateMode','daysPer', esc(josa('한 ' + (it.unit || '개'), '이', '가')) + ' 며칠', it.rateMode === 'daysPer')}</div></div>`;
-      case 'rate': return `<div class="sform"><div class="fg"><span class="fl">하루에 이만큼 먹어요 <em>평일 하루 1${u} = 0.71</em></span>${stepper('fv', fmtRate(Number(it.dailyRate) || 0.71), 0.1, 0, u)}</div>${save}</div>`;
+      case 'rate': return `<div class="sform"><div class="fg"><span class="fl">하루에 이만큼 먹어요 <em>평일만 먹으면 '먹는 요일'에서 골라요</em></span>${stepper('fv', fmtRate(Number(it.dailyRate) || 0.71), 0.1, 0, u)}</div>${save}</div>`;
       case 'daysPer': return `<div class="sform"><div class="fg"><span class="fl">${esc(josa('한 ' + (it.unit || '개'), '이', '가'))} 며칠 가요 <em>개수를 몰라도 돼요</em></span>${stepper('fv', fmtRate(it.daysPer || 6), 0.5, 0.5, '일')}</div>${save}</div>`;
+      case 'days': { const a = activeDays(it) || [0,1,2,3,4,5,6]; return `<div class="sform"><span class="fl">먹는 요일만 골라요 <em>다 고르면 매일</em></span><div class="chips" id="fv-days">${[1,2,3,4,5,6,0].map(x => `<button class="chip2 ${a.includes(x) ? 'on' : ''}" type="button" data-act="daypick" data-val="${x}" aria-pressed="${a.includes(x)}">${WD[x]}</button>`).join('')}</div>${save}</div>`; }
       case 'leadDays': return `<div class="sform"><div class="fg"><span class="fl">떨어지기 며칠 전에 알려 드릴까요?</span>${stepper('fv', it.leadDays ?? 3, 1, 0, '일 전')}</div>${save}</div>`;
       case 'shops': return `<div class="sform"><span class="fl">여러 곳이면 여러 개 골라요</span><div class="chips" id="fv-shops">${SHOP_KEYS.map(k => shopChip(k, shopKeys(it).includes(k))).join('')}</div>${save}</div>`;
       case 'links': return `<div class="sform"><span class="fl">사는 상품 주소를 넣어 두면 [열기]로 바로 가요</span>${linkInputs((it.candidates || []).filter(c => c.url))}${save}</div>`;
@@ -1133,7 +1164,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     const nowIso = new Date(now).toISOString();
     const when = boughtAt && boughtAt < now ? boughtAt : now;
     // 과거 날짜면 그 뒤로 먹은 만큼은 이미 추정에서 빠졌다고 보고, 산 수량에서 그만큼 뺀다.
-    const eaten = (now - when) / DAY * (Number(it.dailyRate) || 0);
+    const eaten = eatDays(it, when, now) * (Number(it.dailyRate) || 0);
     doc.baseQty = Math.max(0, Math.round(((e ? e.est : 0) + qty - eaten) * 10) / 10); doc.baseAt = nowIso;
     const at = new Date(when).toISOString();
     doc.lastBuyAt = at;
@@ -1246,6 +1277,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         btn.parentElement.querySelectorAll('.face-pick').forEach(b => { const on = b === btn; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
         return;
       }
+      if (act === 'daypick'){ const on = !btn.classList.contains('on'); btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', on); return; }
       if (act === 'unitpick'){
         const inp = $('#n-unit') || $('#fv'); if (inp) inp.value = btn.dataset.val;
         btn.parentElement.querySelectorAll('.chip2').forEach(b => b.classList.toggle('on', b === btn));
@@ -1292,6 +1324,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         else if (fieldKey === 'unit'){ doc.unit = fv.value.trim() || '개'; }
         else if (fieldKey === 'rate'){ doc.dailyRate = Math.max(0, Number(fv.value) || 0); doc.rateMode = 'perDay'; }
         else if (fieldKey === 'daysPer'){ doc.daysPer = Math.max(0.5, Number(fv.value) || 6); doc.rateMode = 'daysPer'; doc.dailyRate = Math.round((1 / doc.daysPer) * 1000) / 1000; }
+        else if (fieldKey === 'days'){ const ds = Array.from(document.querySelectorAll('#fv-days .chip2.on')).map(b => Number(b.dataset.val)); if (!ds.length){ toast('하루는 골라 주세요'); return; } doc.days = ds.length === 7 ? [] : ds; }
         else if (fieldKey === 'leadDays'){ doc.leadDays = Math.max(0, Math.round(Number(fv.value) || 0)); }
         else if (fieldKey === 'shops'){ const sh = Array.from(document.querySelectorAll('#fv-shops .chip2.on')).map(b => b.dataset.val); if (!sh.length){ toast('한 곳은 골라 주세요'); return; } doc.shops = sh; doc.shop = sh.length === 1 && sh[0] === 'kurly' ? 'kurly' : sh.length === 1 && sh[0] === 'naver' ? 'smartstore' : 'both'; }
         else if (fieldKey === 'links'){
