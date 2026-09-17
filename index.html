@@ -452,7 +452,6 @@ html,body{overscroll-behavior-y:contain}
 .login-msg{margin:0;text-align:center;font-size:13px;color:hsl(var(--muted-foreground));min-height:1.2em}
 .login-or{display:flex;align-items:center;gap:10px;color:hsl(var(--muted-foreground));font-size:12px}
 .login-or::before,.login-or::after{content:"";flex:1;height:1px;background:hsl(var(--border))}
-#login-code-row{display:flex;flex-direction:column;gap:8px}
 #login-google{gap:10px;border-radius:12px;background:hsl(var(--card));color:hsl(var(--foreground));border:1px solid hsl(var(--input));box-shadow:var(--shadow-sm);height:44px;font-weight:600}
 #login-google:hover{background:hsl(var(--muted))}
 body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
@@ -467,10 +466,6 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     <div class="login-or"><span>또는 이메일 링크</span></div>
     <input class="input" type="email" id="login-email" placeholder="이메일" autocomplete="email" inputmode="email">
     <button class="btn outline block" type="button" id="login-send">로그인 링크 보내기</button>
-    <div id="login-code-row" hidden>
-      <input class="input" type="text" id="login-code" placeholder="메일로 온 6자리 코드" inputmode="numeric" autocomplete="one-time-code" maxlength="8">
-      <button class="btn primary block" type="button" id="login-verify">로그인</button>
-    </div>
     <p class="login-msg" id="login-msg"></p>
   </div>
 </div>
@@ -1432,15 +1427,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
     loginMsg.textContent = '보내는 중…';
     const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
     if (error){ loginMsg.textContent = '보내지 못했습니다. 이메일을 확인해 주세요.'; return; }
-    loginMsg.textContent = '메일함에서 링크를 눌러 주세요. 코드가 함께 왔다면 아래에 넣어도 됩니다.';
-    $('#login-code-row').hidden = false;
-  });
-  $('#login-verify').addEventListener('click', async () => {
-    const email = $('#login-email').value.trim(); const token = $('#login-code').value.trim();
-    if (!email || !token){ $('#login-code').focus(); return; }
-    loginMsg.textContent = '확인 중…';
-    const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
-    if (error) loginMsg.textContent = '코드가 맞지 않거나 만료됐습니다. 다시 보내 주세요.';
+    loginMsg.textContent = '메일함에서 로그인 링크를 눌러 주세요. 링크를 누르면 바로 열려요.';
   });
 
   (async () => {
