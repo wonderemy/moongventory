@@ -660,6 +660,8 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   const BADGE = {count:'outline', order:'destructive', soon:'default', ok:'secondary'};
 
   function fmtQty(n){ return String(Math.round(n)); }
+  // '한 통에 며칠' 품목은 쓰다 만 통도 한 통으로 센다(0.7통 → 1통). 개수 품목은 반올림.
+  function showQty(it, n){ return String(it.rateMode === 'daysPer' ? Math.ceil(n - 0.001) : Math.round(n)); }
   function fmtRate(n){ return (Math.round(n*100)/100).toString(); }
   function fmtDays(d){ if (!isFinite(d)) return '—'; return Math.floor(d) + '일'; }
   function fmtDate(iso){ const d = new Date(iso); return (d.getMonth()+1) + '/' + d.getDate(); }
@@ -826,7 +828,7 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
       html += `<div class="tile" data-id="${it.id}">
         <button class="tile-head" type="button" data-act="toggle">
           <div class="t"><span class="name">${esc(it.name)}</span>${faceImg(it.owner)}</div>
-          <div class="big-row"><div class="big">${e ? fmtQty(e.est) : '—'}<small>${e ? unit : ''}</small></div>${(st === 'order' || st === 'soon') ? `<span class="badge ${BADGE[st]}">${LABEL[st]}</span>` : ''}</div>
+          <div class="big-row"><div class="big">${e ? showQty(it, e.est) : '—'}<small>${e ? unit : ''}</small></div>${(st === 'order' || st === 'soon') ? `<span class="badge ${BADGE[st]}">${LABEL[st]}</span>` : ''}</div>
           <div class="bar"><i class="f-${st}" style="width:${pct}%"></i></div>
           <div class="meta">${metaBits.join(' · ')}</div>
         </button>
@@ -859,10 +861,10 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   }
 
   function renderQuick(it, e){
-    const guess = e ? Math.round(e.est) : 0;
+    const guess = e ? Number(showQty(it, e.est)) : 0;
     const unit = esc(it.unit || '개');
     return `<div class="sform">
-      <div class="fg"><span class="fl">현재 수량 <em>${e ? '추정 ' + fmtQty(e.est) + unit : '아직 없음'}</em></span>
+      <div class="fg"><span class="fl">현재 수량 <em>${e ? '추정 ' + showQty(it, e.est) + unit : '아직 없음'}</em></span>
         <div class="stepper2"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="-1" aria-label="하나 빼기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button><input class="input fi" type="number" inputmode="numeric" id="cnt-${it.id}" value="${guess}" min="0" step="1"><button class="stp" type="button" data-act="step" data-target="#cnt-${it.id}" data-delta="1" aria-label="하나 더하기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6c.15 4 .15 8 0 12"/><path d="M6 12.1c4-.2 8-.2 12 0"/></svg></button></div>
       </div>
       <div class="fbtn"><button class="btn outline" type="button" data-act="cancel">취소</button><button class="btn primary" type="button" data-act="count-save">저장</button></div>
@@ -1360,9 +1362,10 @@ body{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
         toast(bought ? `${doc.name} 추가하고 구매 기록했습니다` : `${doc.name} 추가했습니다`); if (!db) render(); return;
       }
       if (!it) return;
-      if (act === 'count-save'){ const v = $('#cnt-' + id).value; if (v === '') return; await doCount(it, Math.max(0, Number(v)), now); openId = null; mode = null; }
+      if (act === 'count-save'){ const v = $('#cnt-' + id).value; if (v === '') return; if (btn.disabled) return; btn.disabled = true; await doCount(it, Math.max(0, Number(v)), now); openId = null; mode = null; }
       if (act === 'buy-save'){
         const b = readBuyForm(it.owner, now); if (!b) return;
+        if (btn.disabled) return; btn.disabled = true;   // 두 번 눌러도 한 번만 기록
         await doBuy(it, b.qty, b.price, b.shop, now, b.boughtAt, b.by); openId = null; mode = null;
       }
       if (act === 'field-save'){
